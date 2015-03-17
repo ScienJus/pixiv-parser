@@ -50,8 +50,8 @@ public class PageParser {
                 if (Integer.parseInt(count) > praise) {
                     items.add(host + uri);
                 }
-                return items;
             }
+            return items;
         } catch (ParserException e) {
             logger.error(e.getMessage());
         }
