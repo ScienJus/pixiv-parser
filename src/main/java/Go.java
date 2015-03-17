@@ -6,10 +6,11 @@ public class Go {
 
     public static void main(String[] args) {
         PixivClient client = PixivClient.createDefault();
-        client.setUsername("931996776@qq.com");
-        client.setPassword("xel0429");
+        client.setUsername("这里填帐户名");
+        client.setPassword("这里填密码");
         client.login();
-        client.searchAndDownload("境界の彼方", false, 0); //搜索条件， 是否r18， 最小收藏数
+        //根据关键字搜索并过滤收藏数 param: 关键字 是否r18 最小收藏数
+        client.searchAndDownload("境界の彼方", false, 0); 
     }
 
 }
