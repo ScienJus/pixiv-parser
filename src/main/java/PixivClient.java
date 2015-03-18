@@ -1,4 +1,3 @@
-import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 import org.apache.http.NameValuePair;
@@ -17,9 +16,7 @@ import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -69,6 +66,11 @@ public class PixivClient {
     private static final String default_path = "E:/pixiv/";
 
     /**
+     * 日期格式化
+     */
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+
+    /**
      * 用户名
      */
     private String username;
@@ -94,9 +96,9 @@ public class PixivClient {
     private PageParser parser;
 
     /**
-     * 日期格式化
+     * 缓存已经下载的图片id
      */
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+    private Set<String> cache;
 
     /**
      * 设置用户名
@@ -145,6 +147,7 @@ public class PixivClient {
     private PixivClient(String path) {
         this.path = path;
         parser = new PageParser();
+        cache = new HashSet<String>();
     }
 
     /**
@@ -250,12 +253,13 @@ public class PixivClient {
      * @param praise    收藏数过滤条件
      */
     private void searchAndDownload(String url, int praise) {
+        logger.info("url:"+url);
         try {
             String pageHtml = getPage(url);
-            List<String> items = parser.parseList(pageHtml, praise);
-            if (items != null) {
-                for (String imgUrl : items) {
-                    downloadImage(imgUrl);
+            List<String> ids = parser.parseList(pageHtml, praise);
+            if (ids != null) {
+                for (String id : ids) {
+                    downloadImage(id);
                 }
             }
             String next = parser.parseNextPage(pageHtml);
@@ -278,10 +282,13 @@ public class PixivClient {
 
     /**
      * 下载该页面的图片（可能有多张）
-     * @param url
+     * @param id
      */
-    private void downloadImage(String url) {
-        url = decodeUrl(url);
+    private void downloadImage(String id) {
+        if (cache.contains(id)) {
+            return;
+        }
+        String url = buildDetailUrl(id);
         String pageHtml = getPage(url);
         if (parser.isManga(pageHtml)) {
             url = url.replace("medium", "manga");
@@ -290,12 +297,8 @@ public class PixivClient {
             if (images != null) {
                 int i = 0;
                 for (String image : images) {
-                    String id = url.substring(url.lastIndexOf("id=") + 3);
-                    if (id.indexOf("&") > -1) {
-                        id = id.substring(0, id.indexOf("&"));
-                    }
-                    id = id + "_" + i++;
-                    pool.execute(new ImageDownloadTask(id, image, url));
+                    String childId = id + "/" + i++;
+                    pool.execute(new ImageDownloadTask(childId, image, url));
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
@@ -305,10 +308,6 @@ public class PixivClient {
         } else {
             String image = parser.parseMedium(pageHtml);
             if (image != null) {
-                String id = url.substring(url.lastIndexOf("id=") + 3);
-                if (id.indexOf("&") > -1) {
-                    id = id.substring(0, id.indexOf("&"));
-                }
                 pool.execute(new ImageDownloadTask(id, image, url));
                 try {
                     Thread.sleep(100);
@@ -316,6 +315,7 @@ public class PixivClient {
                 }
             }
         }
+        cache.add(id);
     }
 
     /**
@@ -345,7 +345,7 @@ public class PixivClient {
      * @return
      */
     private String buildRankUrl(String today, int page) {
-        return rank_url + "?format=json&date=" + today + "&p=" + page;
+        return rank_url + "?format=json&content=illust&date=" + today + "&p=" + page;
     }
 
     /**
@@ -369,9 +369,9 @@ public class PixivClient {
         while (true) {
             String pageJson = getPage(buildRankUrl(date, page));
             JSONObject json = (JSONObject)JSONValue.parse(pageJson);
-            List<String> ids = parser.praseRank(json, false);
+            List<String> ids = parser.praseRank(json);
             for (String id : ids) {
-                downloadImage(buildDetailUrl(id));
+                downloadImage(id);
             }
             if (json.get("next") != null) {
                 page = Integer.parseInt(String.valueOf(json.get("next")));
@@ -395,9 +395,9 @@ public class PixivClient {
             }
             String pageJson = getPage(buildRankUrl(date, page));
             JSONObject json = (JSONObject)JSONValue.parse(pageJson);
-            List<String> ids = parser.praseRank(json, !date.equals(endDate));
+            List<String> ids = parser.praseRank(json);
             for (String id : ids) {
-                downloadImage(buildDetailUrl(id));
+                downloadImage(id);
             }
             if (json.get("next") != null) {
                 page = Integer.parseInt(String.valueOf(json.get("next")));
@@ -447,14 +447,21 @@ public class PixivClient {
             OutputStream out = null;
 
             try {
-                HttpGet get = new HttpGet(url);
-                get.setHeader("Referer", referer);
-                response = client.execute(get, context);
                 String ext = url.substring(url.lastIndexOf("."));
                 if (ext.indexOf("?") > -1) {
                     ext = ext.substring(0, ext.indexOf("?"));
                 }
-                out = new FileOutputStream(path + id + ext);
+                File file = new File(path + id + ext);
+                if (file.exists()) {
+                    return;
+                }
+                if (!file.getParentFile().exists()) {
+                    file.getParentFile().mkdirs();
+                }
+                HttpGet get = new HttpGet(url);
+                get.setHeader("Referer", referer);
+                response = client.execute(get, context);
+                out = new FileOutputStream(file);
                 byte[] buffer = new byte[1024 * 1024];
                 int bytesRead;
                 while((bytesRead = response.getEntity().getContent().read(buffer)) != -1){

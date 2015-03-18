@@ -26,11 +26,6 @@ public class PageParser {
     private static final Logger logger = Logger.getLogger(PageParser.class);
 
     /**
-     * 主机地址
-     */
-    private static final String host = "http://www.pixiv.net/";
-
-    /**
      * 在搜索列表中过滤出制定条件的图片
      * @param pageHtml
      * @param praise
@@ -50,8 +45,13 @@ public class PageParser {
                 if (childs.size() == 6) {
                     count = childs.elementAt(5).getFirstChild().getFirstChild().getLastChild().getText();
                 }
+                logger.info("count:"+count);
                 if (Integer.parseInt(count) > praise) {
-                    items.add(host + uri);
+                    String id = uri.substring(uri.lastIndexOf("id=") + 3);
+                    if (id.indexOf("&") > -1) {
+                        id = id.substring(0, id.indexOf("&"));
+                    }
+                    items.add(id);
                 }
             }
             return items;
@@ -134,15 +134,18 @@ public class PageParser {
         return null;
     }
 
-    public List<String> praseRank(JSONObject json, boolean onlyNew) {
+    /**
+     * 获得排行榜的图片id
+     * @param json
+     * @return
+     */
+    public List<String> praseRank(JSONObject json) {
         JSONArray contents = (JSONArray) json.get("contents");
         List<String> result = new ArrayList<String>();
         for (int i = 0; i < contents.size(); i++) {
             JSONObject item = (JSONObject) contents.get(i);
-            if (!onlyNew || Integer.parseInt(String.valueOf(item.get("yes_rank"))) != 0) {
-                String id = String.valueOf(item.get("illust_id"));
-                result.add(id);
-            }
+            String id = String.valueOf(item.get("illust_id"));
+            result.add(id);
         }
         return result;
     }
