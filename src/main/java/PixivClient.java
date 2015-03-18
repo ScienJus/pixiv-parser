@@ -1,3 +1,6 @@
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
+import net.minidev.json.JSONValue;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -12,7 +15,10 @@ import org.apache.log4j.Logger;
 import java.io.*;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,6 +54,16 @@ public class PixivClient {
     private static final String search_url = "http://www.pixiv.net/search.php";
 
     /**
+     * 排行榜请求地址
+     */
+    private static final String rank_url = "http://www.pixiv.net/ranking.php";
+
+    /**
+     * 图片详情请求地址
+     */
+    private static final String detail_url = "http://www.pixiv.net/member_illust.php";
+
+    /**
      * 默认的图片存放位置
      */
     private static final String default_path = "E:/pixiv/";
@@ -76,6 +92,11 @@ public class PixivClient {
      * html文本解析器
      */
     private PageParser parser;
+
+    /**
+     * 日期格式化
+     */
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 
     /**
      * 设置用户名
@@ -188,10 +209,10 @@ public class PixivClient {
      */
     public void searchAndDownload(String word, boolean isR18, int praise) {
         logger.info("开始下载收藏数大于" + praise + "的\"" + word + "\"图片");
-        searchAndDownload(search_url + "?word=" + word + "&r18=" + (isR18 ? "1" : "0"), praise);
+        searchAndDownload(bulidSearchUrl(word, isR18), praise);
     }
 
-    private String getHtmlPage(String url) {
+    private String getPage(String url) {
         url = decodeUrl(url);
 
         CloseableHttpClient client = HttpClients.createDefault();
@@ -230,7 +251,7 @@ public class PixivClient {
      */
     private void searchAndDownload(String url, int praise) {
         try {
-            String pageHtml = getHtmlPage(url);
+            String pageHtml = getPage(url);
             List<String> items = parser.parseList(pageHtml, praise);
             if (items != null) {
                 for (String imgUrl : items) {
@@ -261,24 +282,136 @@ public class PixivClient {
      */
     private void downloadImage(String url) {
         url = decodeUrl(url);
-        String pageHtml = getHtmlPage(url);
+        String pageHtml = getPage(url);
         if (parser.isManga(pageHtml)) {
             url = url.replace("medium", "manga");
-            pageHtml = getHtmlPage(url);
+            pageHtml = getPage(url);
             List<String> images = parser.parseManga(pageHtml);
             if (images != null) {
                 int i = 0;
                 for (String image : images) {
-                    String id = url.substring(url.lastIndexOf("id=") + 3) + "_" + i++;
+                    String id = url.substring(url.lastIndexOf("id=") + 3);
+                    if (id.indexOf("&") > -1) {
+                        id = id.substring(0, id.indexOf("&"));
+                    }
+                    id = id + "_" + i++;
                     pool.execute(new ImageDownloadTask(id, image, url));
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                    }
                 }
             }
         } else {
             String image = parser.parseMedium(pageHtml);
             if (image != null) {
                 String id = url.substring(url.lastIndexOf("id=") + 3);
+                if (id.indexOf("&") > -1) {
+                    id = id.substring(0, id.indexOf("&"));
+                }
                 pool.execute(new ImageDownloadTask(id, image, url));
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                }
             }
+        }
+    }
+
+    /**
+     * 下载20070913-当天的排行榜图片，不会重复下载
+     */
+    public void downloadAllRank() {
+        try {
+            downloadRankAfter(sdf.parse("20070913"));
+        } catch (ParseException e) {
+            logger.error("这代码写的有问题：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 合成一个作品详情页的链接
+     * @param id 作品id
+     * @return
+     */
+    private String buildDetailUrl(String id) {
+        return detail_url + "?mode=medium&illust_id=" + id;
+    }
+
+    /**
+     * 合成一个排行榜的链接
+     * @param today 哪一天
+     * @param page 第几页
+     * @return
+     */
+    private String buildRankUrl(String today, int page) {
+        return rank_url + "?format=json&date=" + today + "&p=" + page;
+    }
+
+    /**
+     * 合成一个搜索的链接
+     * @param word
+     * @param isR18
+     * @return
+     */
+    private String bulidSearchUrl(String word, boolean isR18) {
+        return search_url + "?word=" + word + "&r18=" + (isR18 ? "1" : "0");
+    }
+
+    /**
+     * 下载某天的排行榜图片
+     * @param aday
+     */
+    public void downloadRankOn(Date aday) {
+        String date = sdf.format(aday);
+        int page = 0;
+        logger.info("开始下载[" + date + "]的排行榜");
+        while (true) {
+            String pageJson = getPage(buildRankUrl(date, page));
+            JSONObject json = (JSONObject)JSONValue.parse(pageJson);
+            List<String> ids = parser.praseRank(json, false);
+            for (String id : ids) {
+                downloadImage(buildDetailUrl(id));
+            }
+            if (json.get("next") != null) {
+                page = Integer.parseInt(String.valueOf(json.get("next")));
+                continue;
+            }
+            return;
+        }
+    }
+
+    /**
+     * 下载从指定日期到当前的排行榜，不会重复下载
+     * @param aday
+     */
+    public void downloadRankAfter(Date aday) {
+        String date = sdf.format(new Date());
+        int page = 0;
+        String endDate = sdf.format(aday);
+        while (true) {
+            if (page == 0) {
+                logger.info("开始下载[" + date + "]的排行榜");
+            }
+            String pageJson = getPage(buildRankUrl(date, page));
+            JSONObject json = (JSONObject)JSONValue.parse(pageJson);
+            List<String> ids = parser.praseRank(json, !date.equals(endDate));
+            for (String id : ids) {
+                downloadImage(buildDetailUrl(id));
+            }
+            if (json.get("next") != null) {
+                page = Integer.parseInt(String.valueOf(json.get("next")));
+                continue;
+            }
+            if (json.get("prev_date") != null) {
+                if (date.equals(endDate)) {
+                    return;
+                }
+                page = 0;
+                date = String.valueOf(json.get("prev_date"));
+                continue;
+            }
+            return;
         }
     }
 

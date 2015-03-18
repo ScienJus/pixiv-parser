@@ -1,3 +1,5 @@
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.htmlparser.Node;
 import org.htmlparser.NodeFilter;
@@ -11,6 +13,7 @@ import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -25,7 +28,7 @@ public class PageParser {
     /**
      * 主机地址
      */
-    private static final String host = "http://www.pixiv.net";
+    private static final String host = "http://www.pixiv.net/";
 
     /**
      * 在搜索列表中过滤出制定条件的图片
@@ -129,5 +132,18 @@ public class PageParser {
             logger.error(e.getMessage());
         }
         return null;
+    }
+
+    public List<String> praseRank(JSONObject json, boolean onlyNew) {
+        JSONArray contents = (JSONArray) json.get("contents");
+        List<String> result = new ArrayList<String>();
+        for (int i = 0; i < contents.size(); i++) {
+            JSONObject item = (JSONObject) contents.get(i);
+            if (!onlyNew || Integer.parseInt(String.valueOf(item.get("yes_rank"))) != 0) {
+                String id = String.valueOf(item.get("illust_id"));
+                result.add(id);
+            }
+        }
+        return result;
     }
 }
