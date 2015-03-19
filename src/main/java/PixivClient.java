@@ -256,6 +256,9 @@ public class PixivClient {
         logger.info("url:"+url);
         try {
             String pageHtml = getPage(url);
+            if (pageHtml == null) {
+                return;
+            }
             List<String> ids = parser.parseList(pageHtml, praise);
             if (ids != null) {
                 for (String id : ids) {
@@ -290,9 +293,15 @@ public class PixivClient {
         }
         String url = buildDetailUrl(id);
         String pageHtml = getPage(url);
+        if (pageHtml == null) {
+            return;
+        }
         if (parser.isManga(pageHtml)) {
             url = url.replace("medium", "manga");
             pageHtml = getPage(url);
+            if (pageHtml == null) {
+                return;
+            }
             List<String> images = parser.parseManga(pageHtml);
             if (images != null) {
                 int i = 0;
@@ -321,11 +330,48 @@ public class PixivClient {
     /**
      * 下载20070913-当天的排行榜图片，不会重复下载
      */
-    public void downloadAllRank() {
+    public void downloadAllRank(RankingMode mode, boolean isR18) {
         try {
-            downloadRankAfter(sdf.parse("20070913"));
+            downloadRankAfter(sdf.parse("20070913"), mode,  isR18);
         } catch (ParseException e) {
             logger.error("这代码写的有问题：" + e.getMessage());
+        }
+    }
+
+    public void downloadRankBetween(Date start, Date end, RankingMode mode, boolean isR18) {
+        String date = sdf.format(end);
+        int page = 1;
+        String endDate = sdf.format(start);
+        while (true) {
+            if (page == 1) {
+                logger.info("开始下载[" + date + "]的排行榜");
+            }
+            String pageJson = getPage(buildRankUrl(date, page, mode, isR18));
+            if (pageJson == null) {
+                return;
+            }
+            JSONObject json = (JSONObject)JSONValue.parse(pageJson);
+            List<String> ids = parser.praseRank(json);
+            for (String id : ids) {
+                downloadImage(id);
+            }
+            if (json.get("next") != null) {
+                int newPage = Integer.parseInt(String.valueOf(json.get("next")));
+                if (page != newPage) {
+                    page = newPage;
+                    continue;
+                }
+            }
+            if (json.get("prev_date") != null) {
+                if (date.equals(endDate)) {
+                    logger.info("排行榜已全部下载完成！");
+                    return;
+                }
+                page = 1;
+                date = String.valueOf(json.get("prev_date"));
+                continue;
+            }
+            return;
         }
     }
 
@@ -340,12 +386,36 @@ public class PixivClient {
 
     /**
      * 合成一个排行榜的链接
-     * @param today 哪一天
+     * @param aday 哪一天
      * @param page 第几页
      * @return
      */
-    private String buildRankUrl(String today, int page) {
-        return rank_url + "?format=json&content=illust&date=" + today + "&p=" + page;
+    private String buildRankUrl(String aday, int page, RankingMode mode, boolean isR18) {
+        String param;
+        switch (mode) {
+            case all:
+                param = "daily";
+                break;
+            case rookie:
+                param = "rookie";
+                break;
+            case original:
+                param = "original";
+                break;
+            case male:
+                param = "male";
+                break;
+            case female:
+                param = "female";
+                break;
+            default:
+                logger.error("枚举定义的有问题！");
+                return null;
+        }
+        if (isR18) {
+            param += "_r18";
+        }
+        return rank_url + "?format=json&content=illust&date=" + aday + "&p=" + page + "mode=" + param;
     }
 
     /**
@@ -362,57 +432,16 @@ public class PixivClient {
      * 下载某天的排行榜图片
      * @param aday
      */
-    public void downloadRankOn(Date aday) {
-        String date = sdf.format(aday);
-        int page = 0;
-        logger.info("开始下载[" + date + "]的排行榜");
-        while (true) {
-            String pageJson = getPage(buildRankUrl(date, page));
-            JSONObject json = (JSONObject)JSONValue.parse(pageJson);
-            List<String> ids = parser.praseRank(json);
-            for (String id : ids) {
-                downloadImage(id);
-            }
-            if (json.get("next") != null) {
-                page = Integer.parseInt(String.valueOf(json.get("next")));
-                continue;
-            }
-            return;
-        }
+    public void downloadRankOn(Date aday, RankingMode mode, boolean isR18) {
+        downloadRankBetween(aday, aday, mode, isR18);
     }
 
     /**
      * 下载从指定日期到当前的排行榜，不会重复下载
      * @param aday
      */
-    public void downloadRankAfter(Date aday) {
-        String date = sdf.format(new Date());
-        int page = 0;
-        String endDate = sdf.format(aday);
-        while (true) {
-            if (page == 0) {
-                logger.info("开始下载[" + date + "]的排行榜");
-            }
-            String pageJson = getPage(buildRankUrl(date, page));
-            JSONObject json = (JSONObject)JSONValue.parse(pageJson);
-            List<String> ids = parser.praseRank(json);
-            for (String id : ids) {
-                downloadImage(id);
-            }
-            if (json.get("next") != null) {
-                page = Integer.parseInt(String.valueOf(json.get("next")));
-                continue;
-            }
-            if (json.get("prev_date") != null) {
-                if (date.equals(endDate)) {
-                    return;
-                }
-                page = 0;
-                date = String.valueOf(json.get("prev_date"));
-                continue;
-            }
-            return;
-        }
+    public void downloadRankAfter(Date aday, RankingMode mode, boolean isR18) {
+        downloadRankBetween(aday, new Date(), mode, isR18);
     }
 
     /**

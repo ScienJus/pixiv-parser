@@ -41,3 +41,6 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.class
+target/classes/log4j.properties
+target/MANIFEST.MF
