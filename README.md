@@ -6,7 +6,7 @@
 1.登陆【废话    
 2.指定关键词的搜索及根据收藏数过滤（已经实现）    
 3.每日排行榜的爬取（已经实现）
-4.指定关键词的搜索及根据收藏数排序    
+4.指定关键词的搜索及根据收藏数排序
 5.指定作者的所有作品爬取    
     
 本来是创建了一个Web工程的，但是Web工程的资源共享和流量都是大问题（因为Pixiv的图片需要验证Referer，无法直接外链）。    
@@ -19,6 +19,6 @@ PixivClient client = PixivClient.createDefault();
 client.setUsername("这里填帐户名");
 client.setPassword("这里填密码");
 if(client.login()) {
-  //根据关键字搜索并过滤收藏数 param: 关键字 是否r18 最小收藏数
-  client.searchAndDownload("境界の彼方", false, 0);
-}
+   //根据关键字搜索并过滤收藏数 param: 关键字 是否r18 最小收藏数
+   client.searchAndDownload("境界の彼方", false, 0);
+}     
