@@ -6,8 +6,10 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 
@@ -71,6 +73,11 @@ public class PixivClient {
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 
     /**
+     * 下载图片间隔时间
+     */
+    private static final long sleep_time = 200;
+
+    /**
      * 用户名
      */
     private String username;
@@ -99,6 +106,11 @@ public class PixivClient {
      * 缓存已经下载的图片id
      */
     private Set<String> cache;
+
+    /**
+     * http请求发送端
+     */
+    private CloseableHttpClient client;
 
     /**
      * 设置用户名
@@ -130,6 +142,10 @@ public class PixivClient {
      * @return
      */
     public static PixivClient create(String path) {
+        if (path == null || "".equals(path)) {
+            logger.error("请输入地址！");
+            return null;
+        }
         File dir = new File(path);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -138,16 +154,23 @@ public class PixivClient {
             logger.error("选择的路径并不是一个文件夹！");
             return null;
         }
-        if (pool == null) {
-            pool = Executors.newCachedThreadPool();
-        }
         return new PixivClient(path);
     }
 
     private PixivClient(String path) {
+        if (!path.endsWith("/")) {
+            path = path + "/";
+        }
+        if (pool == null) {
+            pool = Executors.newCachedThreadPool();
+        }
         this.path = path;
         parser = new PageParser();
-        cache = new HashSet<String>();
+        cache = new HashSet<>();
+        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
+        manager.setMaxTotal(50);
+        manager.setDefaultMaxPerRoute(25);
+        client = HttpClients.createDefault();
     }
 
     /**
@@ -175,7 +198,6 @@ public class PixivClient {
         }
         logger.info("当前登录的用户为：" + username);
         context = HttpClientContext.create();
-        CloseableHttpClient client = HttpClients.createDefault();
         CloseableHttpResponse response = null;
         try {
             HttpPost post = new HttpPost(login_url);
@@ -197,7 +219,6 @@ public class PixivClient {
                 if (response != null) {
                     response.close();
                 }
-                client.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -211,17 +232,26 @@ public class PixivClient {
      * @param praise    收藏数过滤条件
      */
     public void searchAndDownload(String word, boolean isR18, int praise) {
+        if (word == null || "".equals(word)) {
+            logger.error("请输入关键词！");
+            return;
+        }
         logger.info("开始下载收藏数大于" + praise + "的\"" + word + "\"图片");
         searchAndDownload(bulidSearchUrl(word, isR18), praise);
     }
 
+    /**
+     * 请求并获得页面
+     * @param url
+     * @return
+     */
     private String getPage(String url) {
         url = decodeUrl(url);
-
-        CloseableHttpClient client = HttpClients.createDefault();
         CloseableHttpResponse response = null;
+        HttpGet get = null;
+        client = HttpClients.createDefault();
         try {
-            HttpGet get = new HttpGet(url);
+            get = new HttpGet(url);
             response = client.execute(get, context);
             BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), encoding));
             StringBuilder pageHTML = new StringBuilder();
@@ -233,13 +263,13 @@ public class PixivClient {
             return pageHTML.toString();
         } catch (IOException e) {
             logger.error("获取网页失败：" + url);
+            logger.error(e.getMessage());
             return null;
         } finally {
             try {
                 if (response != null) {
                     response.close();
                 }
-                client.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -253,7 +283,6 @@ public class PixivClient {
      * @param praise    收藏数过滤条件
      */
     private void searchAndDownload(String url, int praise) {
-        logger.info("url:"+url);
         try {
             String pageHtml = getPage(url);
             if (pageHtml == null) {
@@ -304,24 +333,32 @@ public class PixivClient {
             }
             List<String> images = parser.parseManga(pageHtml);
             if (images != null) {
-                int i = 0;
-                for (String image : images) {
-                    String childId = id + "/" + i++;
-                    pool.execute(new ImageDownloadTask(childId, image, url));
+                int i = 1;
+                for (String imgUrl : images) {
+                    Image image = new Image();
+                    image.setDir(path);
+                    image.setId(id);
+                    image.setReferer(url);
+                    image.setChildId("" + i++);
+                    image.setUrl(imgUrl);
+                    pool.execute(new ImageDownloadTask(client, image));
                     try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                    }
+                        Thread.sleep(sleep_time);
+                    } catch (InterruptedException e) {}
                 }
             }
         } else {
-            String image = parser.parseMedium(pageHtml);
-            if (image != null) {
-                pool.execute(new ImageDownloadTask(id, image, url));
+            String imgUrl = parser.parseMedium(pageHtml);
+            if (imgUrl != null) {
+                Image image = new Image();
+                image.setDir(path);
+                image.setId(id);
+                image.setReferer(url);
+                image.setUrl(imgUrl);
+                pool.execute(new ImageDownloadTask(client, image));
                 try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                }
+                    Thread.sleep(sleep_time);
+                } catch (InterruptedException e) {}
             }
         }
         cache.add(id);
@@ -339,6 +376,14 @@ public class PixivClient {
     }
 
     public void downloadRankBetween(Date start, Date end, RankingMode mode, boolean isR18) {
+        if (start == null || end == null || end.getTime() < start.getTime()) {
+            logger.error("输入的时间不正确！");
+            return;
+        }
+        if (mode == null) {
+            logger.error("请选择排行榜类型！");
+            return;
+        }
         String date = sdf.format(end);
         int page = 1;
         String endDate = sdf.format(start);
@@ -346,6 +391,7 @@ public class PixivClient {
             if (page == 1) {
                 logger.info("开始下载[" + date + "]的排行榜");
             }
+            logger.info(buildRankUrl(date, page, mode, isR18));
             String pageJson = getPage(buildRankUrl(date, page, mode, isR18));
             if (pageJson == null) {
                 return;
@@ -415,7 +461,7 @@ public class PixivClient {
         if (isR18) {
             param += "_r18";
         }
-        return rank_url + "?format=json&content=illust&date=" + aday + "&p=" + page + "mode=" + param;
+        return rank_url + "?format=json&content=illust&date=" + aday + "&p=" + page + "&mode=" + param;
     }
 
     /**
@@ -444,73 +490,11 @@ public class PixivClient {
         downloadRankBetween(aday, new Date(), mode, isR18);
     }
 
-    /**
-     * 负责下载图片的线程
-     */
-    private class ImageDownloadTask implements Runnable {
-
-        /**
-         * 图片id
-         */
-        private String id;
-        /**
-         * 图片的地址
-         */
-        private String url;
-        /**
-         * 请求地址（验证用）
-         */
-        private String referer;
-
-        public ImageDownloadTask(String id, String url, String referer) {
-            this.id = id;
-            this.url = url;
-            this.referer = referer;
-        }
-
-        @Override
-        public void run() {
-            logger.info("开始下载图片[" + id + "]...");
-            CloseableHttpClient client = HttpClients.createDefault();
-            CloseableHttpResponse response = null;
-            OutputStream out = null;
-
-            try {
-                String ext = url.substring(url.lastIndexOf("."));
-                if (ext.indexOf("?") > -1) {
-                    ext = ext.substring(0, ext.indexOf("?"));
-                }
-                File file = new File(path + id + ext);
-                if (file.exists()) {
-                    return;
-                }
-                if (!file.getParentFile().exists()) {
-                    file.getParentFile().mkdirs();
-                }
-                HttpGet get = new HttpGet(url);
-                get.setHeader("Referer", referer);
-                response = client.execute(get, context);
-                out = new FileOutputStream(file);
-                byte[] buffer = new byte[1024 * 1024];
-                int bytesRead;
-                while((bytesRead = response.getEntity().getContent().read(buffer)) != -1){
-                    out.write(buffer, 0, bytesRead);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (out != null) {
-                        out.close();
-                    }
-                    if (response != null) {
-                        response.close();
-                    }
-                    client.close();
-                } catch (IOException e) {
-                    logger.error(e.getMessage());
-                }
-            }
+    public void close() {
+        try {
+            client.close();
+        } catch (IOException e) {
+            logger.error("关闭客户端失败：" + e.getMessage());
         }
     }
 }

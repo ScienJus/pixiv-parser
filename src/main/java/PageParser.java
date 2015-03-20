@@ -140,6 +140,7 @@ public class PageParser {
      * @return
      */
     public List<String> praseRank(JSONObject json) {
+        logger.info(json);
         JSONArray contents = (JSONArray) json.get("contents");
         List<String> result = new ArrayList<String>();
         for (int i = 0; i < contents.size(); i++) {
