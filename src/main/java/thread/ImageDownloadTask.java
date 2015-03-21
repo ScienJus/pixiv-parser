@@ -75,7 +75,7 @@ public class ImageDownloadTask implements Runnable {
             while((bytesRead = response.getEntity().getContent().read(buffer)) != -1){
                 out.write(buffer, 0, bytesRead);
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             if (failure++ < PixivClientConfig.max_failure_time) {
                 try {
                     Thread.sleep(PixivClientConfig.sleep_time);

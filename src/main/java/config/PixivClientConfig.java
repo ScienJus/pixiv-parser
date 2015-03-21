@@ -58,4 +58,9 @@ public class PixivClientConfig {
      */
     public static final int max_failure_time = 5;
 
+    /**
+     * 线程池数量
+     */
+    public static final int pool_size = 20;
+
 }

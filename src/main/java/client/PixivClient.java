@@ -136,14 +136,11 @@ public class PixivClient {
             path = path + "/";
         }
         if (pool == null) {
-            pool = Executors.newCachedThreadPool();
+            pool = Executors.newFixedThreadPool(PixivClientConfig.pool_size);
         }
         this.path = path;
         parser = new PageParser();
         cache = new HashSet<>();
-//        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-//        manager.setMaxTotal(50);
-//        manager.setDefaultMaxPerRoute(25);
         client = HttpClients.createDefault();
     }
 
@@ -152,13 +149,13 @@ public class PixivClient {
      * @return
      */
     private UrlEncodedFormEntity buildLoginForm() {
-        List<NameValuePair> formparams = new ArrayList<NameValuePair>();
-        formparams.add(new BasicNameValuePair("mode", "login"));
-        formparams.add(new BasicNameValuePair("pixiv_id", username));
-        formparams.add(new BasicNameValuePair("pass", password));
-        formparams.add(new BasicNameValuePair("return_to", "/"));
-        formparams.add(new BasicNameValuePair("skip", "1"));
-        return new UrlEncodedFormEntity(formparams, PixivClientConfig.encoding);
+        List<NameValuePair> params = new ArrayList<NameValuePair>();
+        params.add(new BasicNameValuePair("mode", "login"));
+        params.add(new BasicNameValuePair("pixiv_id", username));
+        params.add(new BasicNameValuePair("pass", password));
+        params.add(new BasicNameValuePair("return_to", "/"));
+        params.add(new BasicNameValuePair("skip", "1"));
+        return new UrlEncodedFormEntity(params, PixivClientConfig.encoding);
     }
 
     /**
