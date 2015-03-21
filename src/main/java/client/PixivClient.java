@@ -1,17 +1,24 @@
+package client;
+
+import bean.Image;
+import bean.RankingMode;
+import config.PixivClientConfig;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
+import parser.PageParser;
+import thread.ImageDownloadTask;
 
 import java.io.*;
 import java.net.URLDecoder;
@@ -21,6 +28,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static bean.RankingMode.*;
 
 /**
  * 登陆/搜索并下载符合要求的图片/排行榜（暂未实现）
@@ -38,44 +47,9 @@ public class PixivClient {
     public static ExecutorService pool;
 
     /**
-     * 字符编码
-     */
-    private static final Charset encoding = Charset.forName("UTF-8");
-
-    /**
-     * 登陆请求地址
-     */
-    private static final String login_url = "https://www.secure.pixiv.net/login.php";
-
-    /**
-     * 搜索请求地址
-     */
-    private static final String search_url = "http://www.pixiv.net/search.php";
-
-    /**
-     * 排行榜请求地址
-     */
-    private static final String rank_url = "http://www.pixiv.net/ranking.php";
-
-    /**
-     * 图片详情请求地址
-     */
-    private static final String detail_url = "http://www.pixiv.net/member_illust.php";
-
-    /**
-     * 默认的图片存放位置
-     */
-    private static final String default_path = "E:/pixiv/";
-
-    /**
      * 日期格式化
      */
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-
-    /**
-     * 下载图片间隔时间
-     */
-    private static final long sleep_time = 200;
 
     /**
      * 用户名
@@ -133,7 +107,7 @@ public class PixivClient {
      * @return
      */
     public static PixivClient createDefault() {
-        return create(default_path);
+        return create(PixivClientConfig.default_path);
     }
 
     /**
@@ -167,9 +141,9 @@ public class PixivClient {
         this.path = path;
         parser = new PageParser();
         cache = new HashSet<>();
-        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-        manager.setMaxTotal(50);
-        manager.setDefaultMaxPerRoute(25);
+//        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
+//        manager.setMaxTotal(50);
+//        manager.setDefaultMaxPerRoute(25);
         client = HttpClients.createDefault();
     }
 
@@ -184,7 +158,7 @@ public class PixivClient {
         formparams.add(new BasicNameValuePair("pass", password));
         formparams.add(new BasicNameValuePair("return_to", "/"));
         formparams.add(new BasicNameValuePair("skip", "1"));
-        return new UrlEncodedFormEntity(formparams, encoding);
+        return new UrlEncodedFormEntity(formparams, PixivClientConfig.encoding);
     }
 
     /**
@@ -200,7 +174,9 @@ public class PixivClient {
         context = HttpClientContext.create();
         CloseableHttpResponse response = null;
         try {
-            HttpPost post = new HttpPost(login_url);
+            HttpPost post = new HttpPost(PixivClientConfig.login_url);
+            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.socket_timeout).setConnectTimeout(PixivClientConfig.connect_timeout).build();
+            post.setConfig(requestConfig);
             UrlEncodedFormEntity entity = buildLoginForm();
             post.setEntity(entity);
             response = client.execute(post, context);
@@ -241,6 +217,26 @@ public class PixivClient {
     }
 
     /**
+     * 重连机制获取页面
+     * @param url
+     * @return
+     */
+    private String getPageWithReconnection(String url) {
+        int fail = 0;
+        String pageHtml = null;
+        while (pageHtml == null) {
+            pageHtml = getPage(url);
+            if (fail++ > PixivClientConfig.max_failure_time) {
+                return null;
+            }
+            try {
+                Thread.sleep(PixivClientConfig.sleep_time);
+            } catch (InterruptedException e) {}
+        }
+        return pageHtml;
+    }
+
+    /**
      * 请求并获得页面
      * @param url
      * @return
@@ -252,8 +248,10 @@ public class PixivClient {
         client = HttpClients.createDefault();
         try {
             get = new HttpGet(url);
+            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.socket_timeout).setConnectTimeout(PixivClientConfig.connect_timeout).build();
+            get.setConfig(requestConfig);
             response = client.execute(get, context);
-            BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), encoding));
+            BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), PixivClientConfig.encoding));
             StringBuilder pageHTML = new StringBuilder();
             String line;
             while ((line = br.readLine()) != null) {
@@ -284,7 +282,7 @@ public class PixivClient {
      */
     private void searchAndDownload(String url, int praise) {
         try {
-            String pageHtml = getPage(url);
+            String pageHtml = getPageWithReconnection(url);
             if (pageHtml == null) {
                 return;
             }
@@ -296,7 +294,7 @@ public class PixivClient {
             }
             String next = parser.parseNextPage(pageHtml);
             if (next != null) {
-                searchAndDownload(search_url + next, praise);
+                searchAndDownload(PixivClientConfig.search_url + next, praise);
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -314,20 +312,20 @@ public class PixivClient {
 
     /**
      * 下载该页面的图片（可能有多张）
-     * @param id
+     * @param id    作品id
      */
     private void downloadImage(String id) {
         if (cache.contains(id)) {
             return;
         }
         String url = buildDetailUrl(id);
-        String pageHtml = getPage(url);
+        String pageHtml = getPageWithReconnection(url);
         if (pageHtml == null) {
             return;
         }
         if (parser.isManga(pageHtml)) {
             url = url.replace("medium", "manga");
-            pageHtml = getPage(url);
+            pageHtml = getPageWithReconnection(url);
             if (pageHtml == null) {
                 return;
             }
@@ -343,7 +341,7 @@ public class PixivClient {
                     image.setUrl(imgUrl);
                     pool.execute(new ImageDownloadTask(client, image));
                     try {
-                        Thread.sleep(sleep_time);
+                        Thread.sleep(PixivClientConfig.sleep_time);
                     } catch (InterruptedException e) {}
                 }
             }
@@ -357,7 +355,7 @@ public class PixivClient {
                 image.setUrl(imgUrl);
                 pool.execute(new ImageDownloadTask(client, image));
                 try {
-                    Thread.sleep(sleep_time);
+                    Thread.sleep(PixivClientConfig.sleep_time);
                 } catch (InterruptedException e) {}
             }
         }
@@ -365,7 +363,9 @@ public class PixivClient {
     }
 
     /**
-     * 下载20070913-当天的排行榜图片，不会重复下载
+     * 下载所有排行榜图片，不会重复下载
+     * @param mode  排名方式
+     * @param isR18 是否R18
      */
     public void downloadAllRank(RankingMode mode, boolean isR18) {
         try {
@@ -375,6 +375,13 @@ public class PixivClient {
         }
     }
 
+    /**
+     * 下载某个时间段的排行榜图片，不会重复下载
+     * @param start 开始时间
+     * @param end   结束时间
+     * @param mode  排名方式
+     * @param isR18 是否R18
+     */
     public void downloadRankBetween(Date start, Date end, RankingMode mode, boolean isR18) {
         if (start == null || end == null || end.getTime() < start.getTime()) {
             logger.error("输入的时间不正确！");
@@ -392,7 +399,7 @@ public class PixivClient {
                 logger.info("开始下载[" + date + "]的排行榜");
             }
             logger.info(buildRankUrl(date, page, mode, isR18));
-            String pageJson = getPage(buildRankUrl(date, page, mode, isR18));
+            String pageJson = getPageWithReconnection(buildRankUrl(date, page, mode, isR18));
             if (pageJson == null) {
                 return;
             }
@@ -427,13 +434,15 @@ public class PixivClient {
      * @return
      */
     private String buildDetailUrl(String id) {
-        return detail_url + "?mode=medium&illust_id=" + id;
+        return PixivClientConfig.detail_url + "?mode=medium&illust_id=" + id;
     }
 
     /**
      * 合成一个排行榜的链接
      * @param aday 哪一天
      * @param page 第几页
+     * @param mode  排名方式
+     * @param isR18 是否R18
      * @return
      */
     private String buildRankUrl(String aday, int page, RankingMode mode, boolean isR18) {
@@ -461,17 +470,17 @@ public class PixivClient {
         if (isR18) {
             param += "_r18";
         }
-        return rank_url + "?format=json&content=illust&date=" + aday + "&p=" + page + "&mode=" + param;
+        return PixivClientConfig.rank_url + "?format=json&content=illust&date=" + aday + "&p=" + page + "&mode=" + param;
     }
 
     /**
      * 合成一个搜索的链接
-     * @param word
-     * @param isR18
+     * @param word  关键词
+     * @param isR18 是否R18
      * @return
      */
     private String bulidSearchUrl(String word, boolean isR18) {
-        return search_url + "?word=" + word + "&r18=" + (isR18 ? "1" : "0");
+        return PixivClientConfig.search_url + "?word=" + word + "&r18=" + (isR18 ? "1" : "0");
     }
 
     /**
@@ -490,6 +499,9 @@ public class PixivClient {
         downloadRankBetween(aday, new Date(), mode, isR18);
     }
 
+    /**
+     * 关闭PixivClient端
+     */
     public void close() {
         try {
             client.close();

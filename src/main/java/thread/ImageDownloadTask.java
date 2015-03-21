@@ -1,3 +1,8 @@
+package thread;
+
+import bean.Image;
+import config.PixivClientConfig;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -16,16 +21,6 @@ public class ImageDownloadTask implements Runnable {
      * 日志
      */
     private static final Logger logger = Logger.getLogger(ImageDownloadTask.class);
-
-    /**
-     * 最大重试次数
-     */
-    private static final int max_failure_time = 5;
-
-    /**
-     * 失败等待时间
-     */
-    private static final int sleep_time = 200;
 
     /**
      * 重试次数
@@ -55,7 +50,8 @@ public class ImageDownloadTask implements Runnable {
 
     @Override
     public void run() {
-        logger.info("开始下载图片[" + image.getId() + "-" + image.getChildId() + "]...");
+        String id = image.getChildId() == null ? image.getId() : image.getId() + "-" + image.getChildId();
+        logger.info("开始下载图片[" + id + "]...");
 
         File file = new File(image.getPath());
         if (file.exists()) {
@@ -69,6 +65,8 @@ public class ImageDownloadTask implements Runnable {
         HttpGet get = null;
         try {
             get = new HttpGet(image.getUrl());
+            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.socket_timeout).setConnectTimeout(PixivClientConfig.connect_timeout).build();
+            get.setConfig(requestConfig);
             get.setHeader("Referer", image.getReferer());
             response = client.execute(get);
             out = new FileOutputStream(file);
@@ -78,17 +76,17 @@ public class ImageDownloadTask implements Runnable {
                 out.write(buffer, 0, bytesRead);
             }
         } catch (IOException e) {
-            if (failure++ < max_failure_time) {
+            if (failure++ < PixivClientConfig.max_failure_time) {
                 try {
-                    Thread.sleep(sleep_time);
+                    Thread.sleep(PixivClientConfig.sleep_time);
                 } catch (InterruptedException e1) {}
-                logger.error("图片[" + image.getId() + "-" + image.getChildId() + "]下载失败...正在重试第" + failure +"次...");
+                logger.error("图片[" + id + "]下载失败...正在重试第" + failure +"次...");
                 if (file.exists()) {
                     file.delete();
                 }
                 run();
             } else {
-                logger.error("图片[" + image.getId() + "-" + image.getChildId() + "]无法下载...");
+                logger.error("图片[" + id + "]无法下载...");
             }
         } finally {
             try {

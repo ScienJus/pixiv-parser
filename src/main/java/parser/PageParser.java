@@ -1,3 +1,5 @@
+package parser;
+
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.log4j.Logger;
@@ -13,7 +15,6 @@ import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -45,7 +46,6 @@ public class PageParser {
                 if (childs.size() == 6) {
                     count = childs.elementAt(5).getFirstChild().getFirstChild().getLastChild().getText();
                 }
-                logger.info("count:"+count);
                 if (Integer.parseInt(count) > praise) {
                     String id = uri.substring(uri.lastIndexOf("id=") + 3);
                     if (id.indexOf("&") > -1) {

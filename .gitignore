@@ -44,3 +44,4 @@ Temporary Items
 *.class
 target/classes/log4j.properties
 target/MANIFEST.MF
+*.bak
