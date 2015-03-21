@@ -20,9 +20,11 @@ public class Go {
         if (client.login()) {
             //根据关键字搜索并过滤收藏数
             // param: 关键字 是否r18 最小收藏数
-            client.searchAndDownload("誕生日", false, 1000);
+//            client.searchByKeyword("誕生日", false, 1000);
             //搜索某一天的排行榜
 //            client.downloadRankOn(new SimpleDateFormat("yyyyMMdd").parse("20150318"), RankingMode.all, false);
+            //搜索某个作者的所有作品
+            client.searchByAuthor("3567327");
         }
         //关闭资源
         client.close();

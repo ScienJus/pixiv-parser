@@ -202,18 +202,31 @@ public class PixivClient {
     }
 
     /**
-     * 搜索并下载
+     * 通过关键词搜索
      * @param word  关键词
      * @param isR18 是否只需要r18
      * @param praise    收藏数过滤条件
      */
-    public void searchAndDownload(String word, boolean isR18, int praise) {
+    public void searchByKeyword(String word, boolean isR18, int praise) {
         if (word == null || "".equals(word)) {
             logger.error("请输入关键词！");
             return;
         }
-        logger.info("开始下载收藏数大于" + praise + "的\"" + word + "\"图片");
+        logger.info("开始下载收藏数大于" + praise + "的\"" + word + "\"所有图片");
         searchAndDownload(bulidSearchUrl(word, isR18), praise);
+    }
+
+    /**
+     * 通过作者搜索
+     * @param id
+     */
+    public void searchByAuthor(String id) {
+        if (id == null || "".equals(id)) {
+            logger.error("请输入作者id！");
+            return;
+        }
+        logger.info("开始下载作者id[" + id + "]的所有图片");
+        searchAndDownload(buildAuthorUrl(id), -1);
     }
 
     /**
@@ -294,7 +307,11 @@ public class PixivClient {
             }
             String next = parser.parseNextPage(pageHtml);
             if (next != null) {
-                searchAndDownload(PixivClientConfig.search_url + next, praise);
+                if (url.startsWith(PixivClientConfig.search_url)) {
+                    searchAndDownload(PixivClientConfig.search_url + next, praise);
+                } else if (url.startsWith(PixivClientConfig.detail_url)) {
+                    searchAndDownload(PixivClientConfig.detail_url + next, praise);
+                }
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -426,6 +443,14 @@ public class PixivClient {
             }
             return;
         }
+    }
+
+    /**
+     * 合成一个作者主页的连接
+     * @return
+     */
+    private String buildAuthorUrl(String id) {
+        return PixivClientConfig.detail_url + "?id=" + id;
     }
 
     /**

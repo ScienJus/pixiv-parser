@@ -34,7 +34,7 @@ public class PixivClientConfig {
     public static final String rank_url = "http://www.pixiv.net/ranking.php";
 
     /**
-     * 图片详情请求地址
+     * 图片/作者详情请求地址
      */
     public static final String detail_url = "http://www.pixiv.net/member_illust.php";
 
