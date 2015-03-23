@@ -14,7 +14,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 import parser.PageParser;
@@ -22,14 +21,11 @@ import thread.ImageDownloadTask;
 
 import java.io.*;
 import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static bean.RankingMode.*;
 
 /**
  * 登陆/搜索并下载符合要求的图片/排行榜（暂未实现）
@@ -107,7 +103,7 @@ public class PixivClient {
      * @return
      */
     public static PixivClient createDefault() {
-        return create(PixivClientConfig.default_path);
+        return create(PixivClientConfig.DEFAULT_PATH);
     }
 
     /**
@@ -136,7 +132,7 @@ public class PixivClient {
             path = path + "/";
         }
         if (pool == null) {
-            pool = Executors.newFixedThreadPool(PixivClientConfig.pool_size);
+            pool = Executors.newFixedThreadPool(PixivClientConfig.POOL_SIZE);
         }
         this.path = path;
         parser = new PageParser();
@@ -155,7 +151,7 @@ public class PixivClient {
         params.add(new BasicNameValuePair("pass", password));
         params.add(new BasicNameValuePair("return_to", "/"));
         params.add(new BasicNameValuePair("skip", "1"));
-        return new UrlEncodedFormEntity(params, PixivClientConfig.encoding);
+        return new UrlEncodedFormEntity(params, PixivClientConfig.ENCODING);
     }
 
     /**
@@ -171,8 +167,8 @@ public class PixivClient {
         context = HttpClientContext.create();
         CloseableHttpResponse response = null;
         try {
-            HttpPost post = new HttpPost(PixivClientConfig.login_url);
-            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.socket_timeout).setConnectTimeout(PixivClientConfig.connect_timeout).build();
+            HttpPost post = new HttpPost(PixivClientConfig.LOGIN_URL);
+            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.SOCKET_TIMEOUT).setConnectTimeout(PixivClientConfig.CONNECT_TIMEOUT).build();
             post.setConfig(requestConfig);
             UrlEncodedFormEntity entity = buildLoginForm();
             post.setEntity(entity);
@@ -236,11 +232,11 @@ public class PixivClient {
         String pageHtml = null;
         while (pageHtml == null) {
             pageHtml = getPage(url);
-            if (fail++ > PixivClientConfig.max_failure_time) {
+            if (fail++ > PixivClientConfig.MAX_FAILURE_TIME) {
                 return null;
             }
             try {
-                Thread.sleep(PixivClientConfig.sleep_time);
+                Thread.sleep(PixivClientConfig.SLEEP_TIME);
             } catch (InterruptedException e) {}
         }
         return pageHtml;
@@ -258,10 +254,10 @@ public class PixivClient {
         client = HttpClients.createDefault();
         try {
             get = new HttpGet(url);
-            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.socket_timeout).setConnectTimeout(PixivClientConfig.connect_timeout).build();
+            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.SOCKET_TIMEOUT).setConnectTimeout(PixivClientConfig.CONNECT_TIMEOUT).build();
             get.setConfig(requestConfig);
             response = client.execute(get, context);
-            BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), PixivClientConfig.encoding));
+            BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), PixivClientConfig.ENCODING));
             StringBuilder pageHTML = new StringBuilder();
             String line;
             while ((line = br.readLine()) != null) {
@@ -304,10 +300,10 @@ public class PixivClient {
             }
             String next = parser.parseNextPage(pageHtml);
             if (next != null) {
-                if (url.startsWith(PixivClientConfig.search_url)) {
-                    searchAndDownload(PixivClientConfig.search_url + next, praise);
-                } else if (url.startsWith(PixivClientConfig.detail_url)) {
-                    searchAndDownload(PixivClientConfig.detail_url + next, praise);
+                if (url.startsWith(PixivClientConfig.SEARCH_URL)) {
+                    searchAndDownload(PixivClientConfig.SEARCH_URL + next, praise);
+                } else if (url.startsWith(PixivClientConfig.DETAIL_URL)) {
+                    searchAndDownload(PixivClientConfig.DETAIL_URL + next, praise);
                 }
             }
         } catch (Exception e) {
@@ -355,7 +351,7 @@ public class PixivClient {
                     image.setUrl(imgUrl);
                     pool.execute(new ImageDownloadTask(client, image));
                     try {
-                        Thread.sleep(PixivClientConfig.sleep_time);
+                        Thread.sleep(PixivClientConfig.SLEEP_TIME);
                     } catch (InterruptedException e) {}
                 }
             }
@@ -369,7 +365,7 @@ public class PixivClient {
                 image.setUrl(imgUrl);
                 pool.execute(new ImageDownloadTask(client, image));
                 try {
-                    Thread.sleep(PixivClientConfig.sleep_time);
+                    Thread.sleep(PixivClientConfig.SLEEP_TIME);
                 } catch (InterruptedException e) {}
             }
         }
@@ -447,7 +443,7 @@ public class PixivClient {
      * @return
      */
     private String buildAuthorUrl(String id) {
-        return PixivClientConfig.detail_url + "?id=" + id;
+        return PixivClientConfig.DETAIL_URL + "?id=" + id;
     }
 
     /**
@@ -456,7 +452,7 @@ public class PixivClient {
      * @return
      */
     private String buildDetailUrl(String id) {
-        return PixivClientConfig.detail_url + "?mode=medium&illust_id=" + id;
+        return PixivClientConfig.DETAIL_URL + "?mode=medium&illust_id=" + id;
     }
 
     /**
@@ -492,7 +488,7 @@ public class PixivClient {
         if (isR18) {
             param += "_r18";
         }
-        return PixivClientConfig.rank_url + "?format=json&content=illust&date=" + aday + "&p=" + page + "&mode=" + param;
+        return PixivClientConfig.RANK_URL + "?format=json&content=illust&date=" + aday + "&p=" + page + "&mode=" + param;
     }
 
     /**
@@ -502,7 +498,7 @@ public class PixivClient {
      * @return
      */
     private String bulidSearchUrl(String word, boolean isR18) {
-        return PixivClientConfig.search_url + "?word=" + word + "&r18=" + (isR18 ? "1" : "0");
+        return PixivClientConfig.SEARCH_URL + "?word=" + word + "&r18=" + (isR18 ? "1" : "0");
     }
 
     /**

@@ -11,56 +11,56 @@ public class PixivClientConfig {
     /**
      * 字符编码
      */
-    public static final Charset encoding = Charset.forName("UTF-8");
+    public static final Charset ENCODING = Charset.forName("UTF-8");
 
     /**
      * 默认的图片存放位置
      */
-    public static final String default_path = "E:/pixiv/";
+    public static final String DEFAULT_PATH = "E:/pixiv/";
 
     /**
      * 登陆请求地址
      */
-    public static final String login_url = "https://www.secure.pixiv.net/login.php";
+    public static final String LOGIN_URL = "https://www.secure.pixiv.net/login.php";
 
     /**
      * 搜索请求地址
      */
-    public static final String search_url = "http://www.pixiv.net/search.php";
+    public static final String SEARCH_URL = "http://www.pixiv.net/search.php";
 
     /**
      * 排行榜请求地址
      */
-    public static final String rank_url = "http://www.pixiv.net/ranking.php";
+    public static final String RANK_URL = "http://www.pixiv.net/ranking.php";
 
     /**
      * 图片/作者详情请求地址
      */
-    public static final String detail_url = "http://www.pixiv.net/member_illust.php";
+    public static final String DETAIL_URL = "http://www.pixiv.net/member_illust.php";
+
+    /**
+     * 最大发送时间
+     */
+    public static final int SOCKET_TIMEOUT = 2000;
+
+    /**
+     * 最大连接时间
+     */
+    public static final int CONNECT_TIMEOUT = 2000;
 
     /**
      * 下载图片间隔时间
      */
-    public static final int socket_timeout = 2000;
-
-    /**
-     * 下载图片间隔时间
-     */
-    public static final int connect_timeout = 2000;
-
-    /**
-     * 下载图片间隔时间
-     */
-    public static final long sleep_time = 200;
+    public static final long SLEEP_TIME = 200;
 
     /**
      * 最大重试次数
      */
-    public static final int max_failure_time = 5;
+    public static final int MAX_FAILURE_TIME = 5;
 
     /**
      * 线程池数量
      */
-    public static final int pool_size = 20;
+    public static final int POOL_SIZE = 20;
 
 }

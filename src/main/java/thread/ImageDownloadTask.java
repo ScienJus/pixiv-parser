@@ -65,7 +65,7 @@ public class ImageDownloadTask implements Runnable {
         HttpGet get = null;
         try {
             get = new HttpGet(image.getUrl());
-            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.socket_timeout).setConnectTimeout(PixivClientConfig.connect_timeout).build();
+            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.SOCKET_TIMEOUT).setConnectTimeout(PixivClientConfig.CONNECT_TIMEOUT).build();
             get.setConfig(requestConfig);
             get.setHeader("Referer", image.getReferer());
             response = client.execute(get);
@@ -76,9 +76,9 @@ public class ImageDownloadTask implements Runnable {
                 out.write(buffer, 0, bytesRead);
             }
         } catch (Exception e) {
-            if (failure++ < PixivClientConfig.max_failure_time) {
+            if (failure++ < PixivClientConfig.MAX_FAILURE_TIME) {
                 try {
-                    Thread.sleep(PixivClientConfig.sleep_time);
+                    Thread.sleep(PixivClientConfig.SLEEP_TIME);
                 } catch (InterruptedException e1) {}
                 logger.error("图片[" + id + "]下载失败...正在重试第" + failure +"次...");
                 if (file.exists()) {
