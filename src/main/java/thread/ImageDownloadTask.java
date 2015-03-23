@@ -62,7 +62,7 @@ public class ImageDownloadTask implements Runnable {
         }
         CloseableHttpResponse response = null;
         OutputStream out = null;
-        HttpGet get = null;
+        HttpGet get;
         try {
             get = new HttpGet(image.getUrl());
             RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.SOCKET_TIMEOUT).setConnectTimeout(PixivClientConfig.CONNECT_TIMEOUT).build();
