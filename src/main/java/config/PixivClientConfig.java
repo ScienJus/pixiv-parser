@@ -61,6 +61,6 @@ public class PixivClientConfig {
     /**
      * 线程池数量
      */
-    public static final int POOL_SIZE = 20;
+    public static final int POOL_SIZE = 50;
 
 }
