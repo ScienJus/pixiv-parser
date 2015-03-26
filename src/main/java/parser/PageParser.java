@@ -34,10 +34,20 @@ public class PageParser {
      */
     public List<String> parseList(String pageHtml, int praise) {
         try {
-            List<String> items = new ArrayList<String>();
+            List<String> items = new ArrayList<>();
             Parser parser = new Parser(pageHtml);
             NodeFilter filter = new AndFilter(new TagNameFilter("li"),new HasAttributeFilter("class","image-item"));
             NodeList list = parser.parse(filter);
+            if (list.size() == 0) {
+                parser.reset();
+                filter = new AndFilter(new TagNameFilter("li"),new HasAttributeFilter("class","image-item "));
+                list = parser.parse(filter);
+            }
+            if (list.size() == 0) {
+                parser.reset();
+                filter = new TagNameFilter("li");
+                list = parser.parse(filter);
+            }
             for (int i = 0; i < list.size(); i++) {
                 Node item = list.elementAt(i);
                 NodeList childs = item.getChildren();
