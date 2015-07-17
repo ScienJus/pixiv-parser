@@ -19,7 +19,10 @@ import org.apache.log4j.Logger;
 import parser.PageParser;
 import thread.ImageDownloadTask;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URLDecoder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -168,7 +171,10 @@ public class PixivClient {
         CloseableHttpResponse response = null;
         try {
             HttpPost post = new HttpPost(PixivClientConfig.LOGIN_URL);
-            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(PixivClientConfig.SOCKET_TIMEOUT).setConnectTimeout(PixivClientConfig.CONNECT_TIMEOUT).build();
+            RequestConfig requestConfig = RequestConfig.custom().
+                    setSocketTimeout(PixivClientConfig.SOCKET_TIMEOUT).
+                    setConnectTimeout(PixivClientConfig.CONNECT_TIMEOUT).
+                    build();
             post.setConfig(requestConfig);
             UrlEncodedFormEntity entity = buildLoginForm();
             post.setEntity(entity);
@@ -189,7 +195,7 @@ public class PixivClient {
                     response.close();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage());
             }
         }
     }
@@ -201,7 +207,7 @@ public class PixivClient {
      * @param praise    收藏数过滤条件
      */
     public void searchByKeyword(String word, boolean isR18, int praise) {
-        if (word == null || "".equals(word)) {
+        if (word == null || "".equals(word.trim())) {
             logger.error("请输入关键词！");
             return;
         }

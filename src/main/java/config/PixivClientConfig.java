@@ -3,7 +3,7 @@ package config;
 import java.nio.charset.Charset;
 
 /**
- * @author jinxing
+ * @author XieEnlong
  * @date 2015/3/21.
  */
 public class PixivClientConfig {
