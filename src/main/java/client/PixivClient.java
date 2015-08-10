@@ -528,6 +528,7 @@ public class PixivClient {
      */
     public void close() {
         try {
+            pool.shutdown();
             client.close();
         } catch (IOException e) {
             logger.error("关闭客户端失败：" + e.getMessage());
