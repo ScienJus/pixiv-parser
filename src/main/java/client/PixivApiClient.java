@@ -34,46 +34,49 @@ public class PixivApiClient {
 
     /**'
      * 日志文件
+     * the logger
      */
-    private static final Logger logger = Logger.getLogger(PixivApiClient.class);
-
-    /**
-     * 下载图片的线程池
-     */
-    public static ExecutorService pool;
+    private static final Logger LOGGER = Logger.getLogger(PixivApiClient.class);
 
     /**
      * 日期格式化
+     * format date to url param
      */
-    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
     /**
      * 用户名
+     * the username to login
      */
     private String username;
 
     /**
      * 密码
+     * the password to login
      */
     private String password;
 
     /**
      * 鉴权Token
+     * the access token to use pixiv api
      */
     private String accessToken;
 
     /**
      * 请求的上下文（存储登陆信息）
+     * store cookie and session id
      */
     private HttpClientContext context;
 
     /**
      * http请求发送端
+     * send http
      */
     private CloseableHttpClient client;
 
     /**
      * 设置用户名
+     * set your username (pixiv id)
      * @param username  你的pixiv账号
      */
     public void setUsername(String username) {
@@ -82,6 +85,7 @@ public class PixivApiClient {
 
     /**
      * 设置密码
+     * set your pixiv id's password
      * @param password  对应的pixiv密码
      */
     public void setPassword(String password) {
@@ -90,6 +94,7 @@ public class PixivApiClient {
 
     /**
      * 创建一个下载器
+     * create a new instance
      * @return
      */
     public static PixivApiClient create() {
@@ -101,7 +106,7 @@ public class PixivApiClient {
     }
 
     /**
-     * 一个登陆表单的构成
+     * 登陆表单的构成
      * params that need to be submitted when logged in
      * @return
      */
@@ -122,10 +127,10 @@ public class PixivApiClient {
      */
     public boolean login() {
         if (username == null || password == null) {
-            logger.error("用户名或密码为空！");
+            LOGGER.error("用户名或密码为空！");
             return false;
         }
-        logger.info("当前登录的用户为：" + username);
+        LOGGER.info("当前登录的用户为：" + username);
         context = HttpClientContext.create();
         CloseableHttpResponse response = null;
         try {
@@ -139,15 +144,15 @@ public class PixivApiClient {
             post.setEntity(entity);
             response = client.execute(post, context);
             if (response.getStatusLine().getStatusCode() == 200) {
-                logger.info("登陆成功！");
+                LOGGER.info("登陆成功！");
                 this.accessToken = getAccessToken(response);
                 return true;
             } else {
-                logger.error("登陆失败！请检查用户名或密码是否正确");
+                LOGGER.error("登陆失败！请检查用户名或密码是否正确");
                 return false;
             }
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            LOGGER.error(e.getMessage());
             return false;
         } finally {
             try {
@@ -155,13 +160,14 @@ public class PixivApiClient {
                     response.close();
                 }
             } catch (IOException e) {
-                logger.error(e.getMessage());
+                LOGGER.error(e.getMessage());
             }
         }
     }
 
     /**
      * 从Response中获得AccessToken
+     * get access token from response
      * @param response
      * @return
      */
@@ -172,7 +178,7 @@ public class PixivApiClient {
 
     /**
      * 获得返回数据
-     * get content from response
+     * get json content from response
      * @param response
      * @return
      */
@@ -184,20 +190,34 @@ public class PixivApiClient {
         }
     }
 
+    /**
+     * 创建默认的httpGet请求
+     * create a defalut http get
+     * @param url
+     * @return
+     */
     private HttpGet createHttpGet(String url) {
         HttpGet get = new HttpGet(url);
         get.setHeader("Authorization", String.format("Bearer %s", this.accessToken));
+        get.setHeader("Referer", "http://spapi.pixiv.net/");
+        get.setHeader("User-Agent", "PixivIOSApp/5.6.0");
         return get;
     }
 
-    public List<String> getRank(Date date) {
+    /**
+     * 获得某天的排行榜
+     * get ranking on one day
+     * @param date
+     * @return
+     */
+    public List<String> ranking(Date date) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
         int page = 1;
         List<String> ids = new ArrayList<>();
         while (true) {
-            String url = buildRankUrl(date, page);
+            String url = buildRankingUrl(date, page);
             get = createHttpGet(url);
             try {
                 response = client.execute(get, context);
@@ -210,6 +230,7 @@ public class PixivApiClient {
                 Object nextPage = ((JSONObject) json.get("pagination")).get("next");
                 if (nextPage != null) {
                     page = Integer.parseInt(nextPage.toString());
+                    response.close();
                 } else {
                     return ids;
                 }
@@ -219,28 +240,33 @@ public class PixivApiClient {
         }
     }
 
+    /**
+     * 查询作品
+     * search illusts by key word
+     * @param keyWord
+     * @return
+     */
     public List<String> search(String keyWord) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
-        int page = 1;
+        int page = 3;
         List<String> ids = new ArrayList<>();
         while (true) {
             String url = buildSearchUrl(keyWord, page);
-            logger.error(url);
             get = createHttpGet(url);
             try {
                 response = client.execute(get, context);
                 json = getResponseContent(response);
-                logger.error(json);
                 JSONArray works = (JSONArray)json.get("response");
                 for (int i = 0; i < works.size(); i++) {
                     JSONObject item = (JSONObject) works.get(i);
-                    ids.add(((JSONObject)item.get("work")).getAsString("id"));
+                    ids.add(item.getAsString("id"));
                 }
                 Object nextPage = ((JSONObject) json.get("pagination")).get("next");
                 if (nextPage != null) {
                     page = Integer.parseInt(nextPage.toString());
+                    response.close();
                 } else {
                     return ids;
                 }
@@ -250,13 +276,84 @@ public class PixivApiClient {
         }
     }
 
+    /**
+     * 获得指定作者的作品
+     * get illusts by author
+     * @param authorId
+     * @return
+     */
+    public List<String> byAuthor(String authorId) {
+        HttpGet get;
+        CloseableHttpResponse response;
+        JSONObject json;
+        int page = 3;
+        List<String> ids = new ArrayList<>();
+        while (true) {
+            String url = buildByAuthorUrl(authorId, page);
+            get = createHttpGet(url);
+            try {
+                response = client.execute(get, context);
+                json = getResponseContent(response);
+                JSONArray works = (JSONArray)json.get("response");
+                for (int i = 0; i < works.size(); i++) {
+                    JSONObject item = (JSONObject) works.get(i);
+                    ids.add(item.getAsString("id"));
+                }
+                Object nextPage = ((JSONObject) json.get("pagination")).get("next");
+                if (nextPage != null) {
+                    page = Integer.parseInt(nextPage.toString());
+                    response.close();
+                } else {
+                    return ids;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    /**
+     * byAuthor请求的url
+     * the url in byAuthor api
+     * @param authorId
+     * @param page
+     * @return
+     */
+    private static String buildByAuthorUrl(String authorId, int page) {
+        return "https://public-api.secure.pixiv.net/v1/users/" + authorId + "/works.json?" +
+                "period=all&" +
+                "include_stats=true&" +
+                "page=" + page + "&" +
+                "per_page=5&" +
+                "order=desc&" +
+                "sort=date&" +
+                "mode=exact_tag&" +
+                "include_sanity_level=true&" +
+                "image_size=px_128x128,small,large&" +
+                "profile_image_sizes=px_170x170";
+    }
+
+    public static void main(String[] args) {
+        PixivApiClient api = PixivApiClient.create();
+        api.setUsername("1498129534@qq.com");
+        api.setPassword("a123456");
+        api.login();
+        api.byAuthor("3763362");
+    }
+
+    /**
+     * 通过id获取作品
+     * get illust by id
+     * @param id
+     * @return
+     */
     public Illust getIllust(String id) {
         String url = "https://public-api.secure.pixiv.net/v1/works/" + id + ".json?image_sizes=small,medium,large&include_stats=true";
         HttpGet get = createHttpGet(url);
         try {
             CloseableHttpResponse response = client.execute(get, context);
             JSONObject json = getResponseContent(response);
-            logger.error(json);
             return new Illust(json);
         } catch (IOException e) {
             e.printStackTrace();
@@ -264,15 +361,30 @@ public class PixivApiClient {
         return null;
     }
 
-    public static String buildRankUrl(Date date, int page) {
+    /**
+     * 请求排行榜的url
+     * the url in ranking api
+     * @param date
+     * @param page
+     * @return
+     */
+    public static String buildRankingUrl(Date date, int page) {
         return "https://public-api.secure.pixiv.net/v1/ranking/all?" +
                 "mode=daily&" +
                 "page=" + page + "&" +
+                "date=" + sdf.format(date) + "&" +
                 "per_page=50&" +
                 "image_size=px_128x128&" +
                 "profile_image_sizes=px_170x170";
     }
 
+    /**
+     * 请求搜索的url
+     * the url in search api
+     * @param keyWord
+     * @param page
+     * @return
+     */
     public static String buildSearchUrl(String keyWord, int page) {
         return "https://public-api.secure.pixiv.net/v1/search/works.json?" +
                 "period=all&" +
@@ -284,98 +396,19 @@ public class PixivApiClient {
                 "sort=date&" +
                 "mode=exact_tag&" +
                 "include_sanity_level=true&" +
-                "image_size=px_128x128&" +
+                "image_size=px_128x128,small,large&" +
                 "profile_image_sizes=px_170x170";
     }
 
     /**
-     * 合成一个作者主页的连接
-     * @return
-     */
-    private String buildAuthorUrl(String id) {
-        return PixivClientConfig.DETAIL_URL + "?id=" + id;
-    }
-
-    /**
-     * 合成一个作品详情页的链接
-     * @param id 作品id
-     * @return
-     */
-    private String buildDetailUrl(String id) {
-        return PixivClientConfig.DETAIL_URL + "?mode=medium&illust_id=" + id;
-    }
-
-    /**
-     * 合成一个排行榜的链接
-     * @param aday 哪一天
-     * @param page 第几页
-     * @param mode  排名方式
-     * @param isR18 是否R18
-     * @return
-     */
-    private String buildRankUrl(String aday, int page, RankingMode mode, boolean isR18) {
-        String param;
-        switch (mode) {
-            case all:
-                param = "daily";
-                break;
-            case rookie:
-                param = "rookie";
-                break;
-            case original:
-                param = "original";
-                break;
-            case male:
-                param = "male";
-                break;
-            case female:
-                param = "female";
-                break;
-            default:
-                logger.error("枚举定义的有问题！");
-                return null;
-        }
-        if (isR18) {
-            param += "_r18";
-        }
-        return PixivClientConfig.RANK_URL + "?format=json&content=illust&date=" + aday + "&p=" + page + "&mode=" + param;
-    }
-
-    /**
-     * 合成一个搜索的链接
-     * @param word  关键词
-     * @param isR18 是否R18
-     * @return
-     */
-    private String bulidSearchUrl(String word, boolean isR18) {
-        return PixivClientConfig.SEARCH_URL + "?word=" + word + "&r18=" + (isR18 ? "1" : "0");
-    }
-
-    /**
-     * 下载某天的排行榜图片
-     * @param aday
-     */
-//    public void downloadRankOn(Date aday, RankingMode mode, boolean isR18) {
-//        downloadRankBetween(aday, aday, mode, isR18);
-//    }
-
-    /**
-     * 下载从指定日期到当前的排行榜，不会重复下载
-     * @param aday
-     */
-//    public void downloadRankAfter(Date aday, RankingMode mode, boolean isR18) {
-//        downloadRankBetween(aday, new Date(), mode, isR18);
-//    }
-
-    /**
      * 关闭PixivClient端
+     * close the client
      */
     public void close() {
         try {
-            pool.shutdown();
             client.close();
         } catch (IOException e) {
-            logger.error("关闭客户端失败：" + e.getMessage());
+            LOGGER.error("关闭客户端失败：" + e.getMessage());
         }
     }
 }
