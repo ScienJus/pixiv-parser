@@ -1,7 +1,5 @@
 package bean;
 
-import net.minidev.json.JSONObject;
-
 /**
  * @author XieEnlong
  * @date 2015/8/10.
@@ -52,6 +50,19 @@ public class IllustImage {
 
     public void setSerial(int serial) {
         this.serial = serial;
+    }
+
+    public String getExtension() {
+        if (largeUrl == null) {
+            return null;
+        }
+        int extIndex = largeUrl.lastIndexOf(".");
+
+        if (extIndex == -1) {
+            return "";
+        } else {
+            return largeUrl.substring(extIndex + 1);
+        }
     }
 
     @Override

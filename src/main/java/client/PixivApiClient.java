@@ -20,6 +20,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
+import thread.IllustDownloadTask;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -517,7 +518,10 @@ public class PixivApiClient {
         api.setUsername("1498129534@qq.com");
         api.setPassword("a123456");
         if (api.login()) {
-            api.search("kancolle");
+            List<IllustListItem> items = api.search("kancolle", 1);
+            for (IllustListItem item : items) {
+                new Thread(new IllustDownloadTask("E:/kancolle", api.getIllust(item.getId()))).start();
+            }
         }
     }
 
