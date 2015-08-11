@@ -82,6 +82,15 @@ if (client.login()) {
 		System.out.println("Author: " + illust.getAuthorName() + "[" + illust.getAuthorId() + "]");
 		//the pictures in this illust
 		List<IllustImage> images = illust.getImages();
+		//you can download images like
+		for (IllustImage image : images) {
+			new Thread(new IllustImageDownloadTask(image, new DownloadCallback() {
+            @Override
+            public void onFinished(IllustImage illust, byte[] file) {
+                //do something..
+            }
+        }))
+		}
 	}
 	
 }
