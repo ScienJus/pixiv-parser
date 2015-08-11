@@ -1,8 +1,10 @@
 package client;
 
 import bean.Illust;
-import bean.RankingMode;
+import bean.IllustListItem;
 import config.PixivClientConfig;
+import filter.IllustFilter;
+import filter.impl.AlwaysTrueFilter;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
@@ -24,7 +26,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * 使用Pixiv iOS APi的客户端
@@ -70,14 +71,14 @@ public class PixivApiClient {
 
     /**
      * http请求发送端
-     * send http
+     * send to pixiv
      */
     private CloseableHttpClient client;
 
     /**
      * 设置用户名
      * set your username (pixiv id)
-     * @param username  你的pixiv账号
+     * @param username
      */
     public void setUsername(String username) {
         this.username = username;
@@ -86,7 +87,7 @@ public class PixivApiClient {
     /**
      * 设置密码
      * set your pixiv id's password
-     * @param password  对应的pixiv密码
+     * @param password
      */
     public void setPassword(String password) {
         this.password = password;
@@ -166,6 +167,25 @@ public class PixivApiClient {
     }
 
     /**
+     * 通过id获取作品
+     * get illust by id
+     * @param id
+     * @return
+     */
+    public Illust getIllust(String id) {
+        String url = "https://public-api.secure.pixiv.net/v1/works/" + id + ".json?image_sizes=small,medium,large&include_stats=true";
+        HttpGet get = defaultHttpGet(url);
+        try {
+            CloseableHttpResponse response = client.execute(get, context);
+            JSONObject json = getResponseContent(response);
+            return new Illust(json);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
      * 从Response中获得AccessToken
      * get access token from response
      * @param response
@@ -184,7 +204,9 @@ public class PixivApiClient {
      */
     private static JSONObject getResponseContent(CloseableHttpResponse response) {
         try {
-            return (JSONObject) JSONValue.parse(new InputStreamReader(response.getEntity().getContent(), PixivClientConfig.ENCODING));
+            JSONObject content = (JSONObject) JSONValue.parse(new InputStreamReader(response.getEntity().getContent(), PixivClientConfig.ENCODING));
+            response.close();
+            return content;
         } catch (IOException e) {
             return null;
         }
@@ -196,7 +218,7 @@ public class PixivApiClient {
      * @param url
      * @return
      */
-    private HttpGet createHttpGet(String url) {
+    private HttpGet defaultHttpGet(String url) {
         HttpGet get = new HttpGet(url);
         get.setHeader("Authorization", String.format("Bearer %s", this.accessToken));
         get.setHeader("Referer", "http://spapi.pixiv.net/");
@@ -210,29 +232,40 @@ public class PixivApiClient {
      * @param date
      * @return
      */
-    public List<String> ranking(Date date) {
+    public List<IllustListItem> ranking(Date date) {
+        return ranking(date, new AlwaysTrueFilter());
+    }
+
+    /**
+     * 获得某天的排行榜（使用自定义过滤器筛选）
+     * get ranking on one day with your custom filter
+     * @param date
+     * @return
+     */
+    public List<IllustListItem> ranking(Date date, IllustFilter filter) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
         int page = 1;
-        List<String> ids = new ArrayList<>();
+        List<IllustListItem> items = new ArrayList<>();
         while (true) {
             String url = buildRankingUrl(date, page);
-            get = createHttpGet(url);
+            get = defaultHttpGet(url);
             try {
                 response = client.execute(get, context);
                 json = getResponseContent(response);
                 JSONArray works = (JSONArray) ((JSONObject)((JSONArray) json.get("response")).get(0)).get("works");
                 for (int i = 0; i < works.size(); i++) {
-                    JSONObject item = (JSONObject) works.get(i);
-                    ids.add(((JSONObject)item.get("work")).getAsString("id"));
+                    IllustListItem item = new IllustListItem((JSONObject) ((JSONObject) works.get(i)).get("work"));
+                    if (filter.doFilter(item)) {
+                        items.add(item);
+                    }
                 }
-                Object nextPage = ((JSONObject) json.get("pagination")).get("next");
+                Integer nextPage = getNextPage(json);
                 if (nextPage != null) {
-                    page = Integer.parseInt(nextPage.toString());
-                    response.close();
+                    page = nextPage;
                 } else {
-                    return ids;
+                    return items;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -246,29 +279,40 @@ public class PixivApiClient {
      * @param keyWord
      * @return
      */
-    public List<String> search(String keyWord) {
+    public List<IllustListItem> search(String keyWord) {
+        return search(keyWord, new AlwaysTrueFilter());
+    }
+
+    /**
+     * 查询作品（使用自定义过滤器筛选）
+     * search illusts by key word with your custom filter
+     * @param keyWord
+     * @return
+     */
+    public List<IllustListItem> search(String keyWord, IllustFilter filter) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
         int page = 3;
-        List<String> ids = new ArrayList<>();
+        List<IllustListItem> items = new ArrayList<>();
         while (true) {
             String url = buildSearchUrl(keyWord, page);
-            get = createHttpGet(url);
+            get = defaultHttpGet(url);
             try {
                 response = client.execute(get, context);
                 json = getResponseContent(response);
                 JSONArray works = (JSONArray)json.get("response");
                 for (int i = 0; i < works.size(); i++) {
-                    JSONObject item = (JSONObject) works.get(i);
-                    ids.add(item.getAsString("id"));
+                    IllustListItem item = new IllustListItem((JSONObject) works.get(i));
+                    if (filter.doFilter(item)) {
+                        items.add(item);
+                    }
                 }
-                Object nextPage = ((JSONObject) json.get("pagination")).get("next");
+                Integer nextPage = getNextPage(json);
                 if (nextPage != null) {
-                    page = Integer.parseInt(nextPage.toString());
-                    response.close();
+                    page = nextPage;
                 } else {
-                    return ids;
+                    return items;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -282,29 +326,40 @@ public class PixivApiClient {
      * @param authorId
      * @return
      */
-    public List<String> byAuthor(String authorId) {
+    public List<IllustListItem> byAuthor(String authorId) {
+        return byAuthor(authorId, new AlwaysTrueFilter());
+    }
+
+    /**
+     * 获得指定作者的作品（使用自定义过滤器筛选）
+     * get illusts by author with your custom filter
+     * @param authorId
+     * @return
+     */
+    public List<IllustListItem> byAuthor(String authorId, IllustFilter filter) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
         int page = 3;
-        List<String> ids = new ArrayList<>();
+        List<IllustListItem> items = new ArrayList<>();
         while (true) {
             String url = buildByAuthorUrl(authorId, page);
-            get = createHttpGet(url);
+            get = defaultHttpGet(url);
             try {
                 response = client.execute(get, context);
                 json = getResponseContent(response);
                 JSONArray works = (JSONArray)json.get("response");
                 for (int i = 0; i < works.size(); i++) {
-                    JSONObject item = (JSONObject) works.get(i);
-                    ids.add(item.getAsString("id"));
+                    IllustListItem item = new IllustListItem((JSONObject) works.get(i));
+                    if (filter.doFilter(item)) {
+                        items.add(item);
+                    }
                 }
-                Object nextPage = ((JSONObject) json.get("pagination")).get("next");
+                Integer nextPage = getNextPage(json);
                 if (nextPage != null) {
-                    page = Integer.parseInt(nextPage.toString());
-                    response.close();
+                    page = nextPage;
                 } else {
-                    return ids;
+                    return items;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -332,33 +387,6 @@ public class PixivApiClient {
                 "include_sanity_level=true&" +
                 "image_size=px_128x128,small,large&" +
                 "profile_image_sizes=px_170x170";
-    }
-
-    public static void main(String[] args) {
-        PixivApiClient api = PixivApiClient.create();
-        api.setUsername("1498129534@qq.com");
-        api.setPassword("a123456");
-        api.login();
-        api.byAuthor("3763362");
-    }
-
-    /**
-     * 通过id获取作品
-     * get illust by id
-     * @param id
-     * @return
-     */
-    public Illust getIllust(String id) {
-        String url = "https://public-api.secure.pixiv.net/v1/works/" + id + ".json?image_sizes=small,medium,large&include_stats=true";
-        HttpGet get = createHttpGet(url);
-        try {
-            CloseableHttpResponse response = client.execute(get, context);
-            JSONObject json = getResponseContent(response);
-            return new Illust(json);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     /**
@@ -398,6 +426,29 @@ public class PixivApiClient {
                 "include_sanity_level=true&" +
                 "image_size=px_128x128,small,large&" +
                 "profile_image_sizes=px_170x170";
+    }
+
+    /**
+     * 获得下一页
+     * get next page number
+     * @param json
+     * @return
+     */
+    public static Integer getNextPage(JSONObject json) {
+        Object nextPage = ((JSONObject) json.get("pagination")).get("next");
+        if (nextPage != null) {
+            return Integer.parseInt(nextPage.toString());
+        }
+        return null;
+    }
+
+    public static void main(String[] args) {
+        PixivApiClient api = PixivApiClient.create();
+        api.setUsername("1498129534@qq.com");
+        api.setPassword("a123456");
+        if (api.login()) {
+            api.search("kancolle");
+        }
     }
 
     /**
