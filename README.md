@@ -5,6 +5,8 @@
 ###PixivClient
 通过解析www.pixiv.net完成图片的爬取和下载，适合直接下载使用。
 
+如果你想了解如何解析并模拟请求，可以参考我博客的文章：[Pixiv爬图教程][1]
+
 示例：
 ```
 //创建实例并选择图片保存位置
@@ -179,3 +181,5 @@ if (client.login()) {
 //please close the client after used
 client.close();
 ```
+
+[1]:http://www.scienjus.com/pixiv-parser/
