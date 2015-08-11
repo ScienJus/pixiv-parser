@@ -49,7 +49,7 @@ public class Illust {
             image.setLargeUrl(urls.getAsString("large"));
             image.setMediumUrl(urls.getAsString("medium"));
             image.setSmallUrl(urls.getAsString("small"));
-            image.setSerial(1);
+            image.setSerial(0);
             images.add(image);
         }
     }
