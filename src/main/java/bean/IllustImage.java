@@ -1,5 +1,7 @@
 package bean;
 
+import net.minidev.json.JSONObject;
+
 /**
  * @author XieEnlong
  * @date 2015/8/10.

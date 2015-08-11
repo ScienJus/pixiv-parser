@@ -2,6 +2,7 @@ package client;
 
 import bean.Illust;
 import bean.IllustListItem;
+import config.PixivApiClientConfig;
 import config.PixivClientConfig;
 import filter.IllustFilter;
 import filter.impl.AlwaysTrueFilter;
@@ -233,16 +234,36 @@ public class PixivApiClient {
      * @return
      */
     public List<IllustListItem> ranking(Date date) {
-        return ranking(date, new AlwaysTrueFilter());
+        return ranking(date, new AlwaysTrueFilter(), PixivApiClientConfig.NO_LIMIT);
     }
 
     /**
      * 获得某天的排行榜（使用自定义过滤器筛选）
-     * get ranking on one day with your custom filter
+     * get ranking on one day with custom filter
      * @param date
      * @return
      */
     public List<IllustListItem> ranking(Date date, IllustFilter filter) {
+        return ranking(date, filter, PixivApiClientConfig.NO_LIMIT);
+    }
+
+    /**
+     * 获得某天的排行榜（指定作品数）
+     * get ranking on one day with limit
+     * @param date
+     * @return
+     */
+    public List<IllustListItem> ranking(Date date, int limit) {
+        return ranking(date, new AlwaysTrueFilter(), limit);
+    }
+
+    /**
+     * 获得某天的排行榜（使用自定义过滤器筛选并指定作品数）
+     * get ranking on one day with custom filter and limit
+     * @param date
+     * @return
+     */
+    public List<IllustListItem> ranking(Date date, IllustFilter filter, int limit) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
@@ -259,6 +280,9 @@ public class PixivApiClient {
                     IllustListItem item = new IllustListItem((JSONObject) ((JSONObject) works.get(i)).get("work"));
                     if (filter.doFilter(item)) {
                         items.add(item);
+                        if (limit != PixivApiClientConfig.NO_LIMIT && items.size() >= limit) {
+                            return items;
+                        }
                     }
                 }
                 Integer nextPage = getNextPage(json);
@@ -280,16 +304,36 @@ public class PixivApiClient {
      * @return
      */
     public List<IllustListItem> search(String keyWord) {
-        return search(keyWord, new AlwaysTrueFilter());
+        return search(keyWord, new AlwaysTrueFilter(), PixivApiClientConfig.NO_LIMIT);
     }
 
     /**
      * 查询作品（使用自定义过滤器筛选）
-     * search illusts by key word with your custom filter
+     * search illusts by key word with custom filter
      * @param keyWord
      * @return
      */
     public List<IllustListItem> search(String keyWord, IllustFilter filter) {
+        return search(keyWord, filter, PixivApiClientConfig.NO_LIMIT);
+    }
+
+    /**
+     * 查询作品（指定作品数）
+     * search illusts by key word with limit
+     * @param keyWord
+     * @return
+     */
+    public List<IllustListItem> search(String keyWord, int limit) {
+        return search(keyWord, new AlwaysTrueFilter(), limit);
+    }
+
+    /**
+     * 查询作品（使用自定义过滤器筛选并指定作品数）
+     * search illusts by key word with custom filter and limit
+     * @param keyWord
+     * @return
+     */
+    public List<IllustListItem> search(String keyWord, IllustFilter filter, int limit) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
@@ -306,6 +350,9 @@ public class PixivApiClient {
                     IllustListItem item = new IllustListItem((JSONObject) works.get(i));
                     if (filter.doFilter(item)) {
                         items.add(item);
+                        if (limit != PixivApiClientConfig.NO_LIMIT && items.size() >= limit) {
+                            return items;
+                        }
                     }
                 }
                 Integer nextPage = getNextPage(json);
@@ -327,16 +374,36 @@ public class PixivApiClient {
      * @return
      */
     public List<IllustListItem> byAuthor(String authorId) {
-        return byAuthor(authorId, new AlwaysTrueFilter());
+        return byAuthor(authorId, new AlwaysTrueFilter(), PixivApiClientConfig.NO_LIMIT);
     }
 
     /**
      * 获得指定作者的作品（使用自定义过滤器筛选）
-     * get illusts by author with your custom filter
+     * get illusts by author with custom filter
      * @param authorId
      * @return
      */
     public List<IllustListItem> byAuthor(String authorId, IllustFilter filter) {
+        return byAuthor(authorId, filter, PixivApiClientConfig.NO_LIMIT);
+    }
+
+    /**
+     * 获得指定作者的作品（指定作品数）
+     * get illusts by author with limit
+     * @param authorId
+     * @return
+     */
+    public List<IllustListItem> byAuthor(String authorId, int limit) {
+        return byAuthor(authorId, new AlwaysTrueFilter(), limit);
+    }
+
+    /**
+     * 获得指定作者的作品（使用自定义过滤器筛选并指定作品数）
+     * get illusts by author with custom filter and limit
+     * @param authorId
+     * @return
+     */
+    public List<IllustListItem> byAuthor(String authorId, IllustFilter filter, int limit) {
         HttpGet get;
         CloseableHttpResponse response;
         JSONObject json;
@@ -353,6 +420,9 @@ public class PixivApiClient {
                     IllustListItem item = new IllustListItem((JSONObject) works.get(i));
                     if (filter.doFilter(item)) {
                         items.add(item);
+                        if (limit != PixivApiClientConfig.NO_LIMIT && items.size() >= limit) {
+                            return items;
+                        }
                     }
                 }
                 Integer nextPage = getNextPage(json);

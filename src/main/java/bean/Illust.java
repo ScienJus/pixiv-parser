@@ -13,9 +13,9 @@ import java.util.List;
 public class Illust {
 
     private String id;
+    private String title;
     private String authorId;
     private String authorName;
-    private boolean manga;
     private List<IllustImage> images;
 
     public Illust() {
@@ -23,13 +23,14 @@ public class Illust {
 
     public Illust(JSONObject json) {
         JSONObject root = (JSONObject) ((JSONArray)json.get("response")).get(0);
-        this.manga = Boolean.parseBoolean(root.getAsString("is_manga"));
         this.id = root.getAsString("id");
+        this.title = root.getAsString("title");
         JSONObject author = (JSONObject) root.get("user");
         this.authorId = author.getAsString("id");
         this.authorName = author.getAsString("name");
-        images = new ArrayList<>();
-        if (manga) {
+        this.images = new ArrayList<>();
+        boolean isManga = Boolean.parseBoolean(root.getAsString("is_manga"));
+        if (isManga) {
             JSONArray pages = (JSONArray) ((JSONObject) root.get("metadata")).get("pages");
             for (int i = 0; i < pages.size(); i++) {
                 JSONObject urls = (JSONObject) ((JSONObject)pages.get(i)).get("image_urls");
@@ -61,6 +62,14 @@ public class Illust {
         this.id = id;
     }
 
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public String getAuthorId() {
         return authorId;
     }
@@ -77,14 +86,6 @@ public class Illust {
         this.authorName = authorName;
     }
 
-    public boolean isManga() {
-        return manga;
-    }
-
-    public void setManga(boolean manga) {
-        this.manga = manga;
-    }
-
     public List<IllustImage> getImages() {
         return images;
     }
@@ -97,9 +98,9 @@ public class Illust {
     public String toString() {
         return "Illust{" +
                 "id='" + id + '\'' +
+                ", title='" + title + '\'' +
                 ", authorId='" + authorId + '\'' +
                 ", authorName='" + authorName + '\'' +
-                ", manga=" + manga +
                 ", images=" + images +
                 '}';
     }
