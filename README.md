@@ -1,6 +1,11 @@
 中文文档：
-[chinese][/docs/readme_cn.md]
+
+[请点击这里][1]
 
 
 Document in English:
-[english][/docs/readme_en.md]
+
+[click here][2]
+
+[1]:/docs/readme_cn.md
+[2]:/docs/readme_en.md
