@@ -15,7 +15,7 @@ import java.io.*;
  */
 public class IllustImageDownloadTask implements Runnable {
 
-    private static final Logger LOGGER = Logger.getLogger(IllustDownloadTask.class);
+    private static final Logger LOGGER = Logger.getLogger(IllustImageDownloadTask.class);
 
     private IllustImage image;
 

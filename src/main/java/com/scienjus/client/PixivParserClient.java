@@ -82,16 +82,7 @@ public class PixivParserClient {
         this.password = password;
     }
 
-    /**
-     * 创建一个下载器
-     * create a new instance
-     * @return
-     */
-    public static PixivParserClient create() {
-        return new PixivParserClient();
-    }
-
-    private PixivParserClient() {
+    public PixivParserClient() {
         client = HttpClients.createDefault();
     }
 
@@ -192,6 +183,42 @@ public class PixivParserClient {
     }
 
     /**
+     * 获得当天的排行榜
+     * get now ranking
+     * @return
+     */
+    public List<IllustListItem> ranking() {
+        return ranking((Date)null);
+    }
+
+    /**
+     * 获得当天的排行榜（使用自定义过滤器筛选）
+     * get now ranking with custom filter
+     * @return
+     */
+    public List<IllustListItem> ranking(IllustFilter filter) {
+        return ranking(null, filter);
+    }
+
+    /**
+     * 获得当天的排行榜（指定作品数）
+     * get now ranking with limit
+     * @return
+     */
+    public List<IllustListItem> ranking(int limit) {
+        return ranking((Date)null, limit);
+    }
+
+    /**
+     * 获得当天的排行榜（使用自定义过滤器筛选并指定作品数）
+     * get now ranking with custom filter and limit
+     * @return
+     */
+    public List<IllustListItem> ranking(IllustFilter filter, int limit) {
+        return ranking(null, filter, limit);
+    }
+
+    /**
      * 获得某天的排行榜
      * get ranking on one day
      * @param date
@@ -234,9 +261,11 @@ public class PixivParserClient {
         List<IllustListItem> items = new ArrayList<>();
         while (true) {
             String url = buildRankUrl(date, page);
+            LOGGER.error(url);
             get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
                 json = getResponseContent(response);
+                LOGGER.error(json);
                 JSONArray works = (JSONArray) ((JSONObject)((JSONArray) json.get("response")).get(0)).get("works");
                 for (int i = 0; i < works.size(); i++) {
                     IllustListItem item = new IllustListItem((JSONObject) ((JSONObject) works.get(i)).get("work"));
@@ -406,6 +435,7 @@ public class PixivParserClient {
     public static final String buildByAuthorUrl(String authorId, int page) {
         Map<String, String> params = getCommonParams(page);
         params.put("mode", "exact_tag");
+        params.put("per_page", "30");
         return buildGetUrl(PixivParserConfig.AUTHOR_DETAIL_URL.replace("{authorId}", authorId), params);
     }
 
@@ -419,6 +449,7 @@ public class PixivParserClient {
     public static String buildRankUrl(Date date, int page) {
         Map<String, String> params = getCommonParams(page);
         params.put("mode", "daily");
+        params.put("per_page", "50");
         if (date != null) {
             params.put("date", FORMAT.format(date));
         }
@@ -436,6 +467,7 @@ public class PixivParserClient {
         Map<String, String> params = getCommonParams(page);
         params.put("q", keyWord);
         params.put("mode", "exact_tag");
+        params.put("per_page", "30");
         return buildGetUrl(PixivParserConfig.SEARCH_URL, params);
     }
 
@@ -454,8 +486,7 @@ public class PixivParserClient {
         params.put("period", "all");
         params.put("order", "desc");
         params.put("sort", "date");
-        params.put("page", "page");
-        params.put("per_page", String.valueOf(PixivParserConfig.PAGING_SIZE));
+        params.put("page", String.valueOf(page));
         return params;
     }
 
@@ -490,7 +521,7 @@ public class PixivParserClient {
         for (Map.Entry<String, String> entry : params.entrySet()) {
             buffer.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
         }
-        buffer.deleteCharAt(buffer.length());
+        buffer.deleteCharAt(buffer.length() - 1);
         return buffer.toString();
     }
 
@@ -519,4 +550,5 @@ public class PixivParserClient {
             LOGGER.error("关闭客户端失败：" + e.getMessage());
         }
     }
+
 }
