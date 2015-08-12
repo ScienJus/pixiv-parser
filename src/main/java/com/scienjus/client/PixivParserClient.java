@@ -498,7 +498,7 @@ public class PixivParserClient {
      */
     private static final String buildDetailUrl(String illustId) {
         Map<String, String> params = new HashMap<>();
-        params.put("image_size", "small,medium,large");
+        params.put("image_sizes", "small,medium,large");
         params.put("include_stats", "true");
         return buildGetUrl(PixivParserConfig.ILLUST_DETAIL_URL.replace("{illustId}", illustId), params);
     }
