@@ -1,4 +1,4 @@
-package bean;
+package com.scienjus.bean;
 
 /**
  * @author XieEnlong

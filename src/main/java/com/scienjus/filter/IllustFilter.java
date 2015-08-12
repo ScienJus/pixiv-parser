@@ -1,6 +1,6 @@
-package filter;
+package com.scienjus.filter;
 
-import bean.IllustListItem;
+import com.scienjus.bean.IllustListItem;
 
 /**
  * @author XieEnlong

@@ -1,16 +1,13 @@
-package thread;
+package com.scienjus.thread;
 
-import bean.Illust;
-import bean.IllustImage;
-import callback.DownloadCallback;
+import com.scienjus.bean.IllustImage;
+import com.scienjus.callback.DownloadCallback;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
 import java.io.*;
 
 /**

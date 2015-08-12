@@ -1,7 +1,7 @@
-package thread;
+package com.scienjus.thread;
 
-import bean.Illust;
-import bean.IllustImage;
+import com.scienjus.bean.Illust;
+import com.scienjus.bean.IllustImage;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;

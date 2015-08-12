@@ -1,4 +1,4 @@
-package bean;
+package com.scienjus.bean;
 
 /**
  * 作品的年龄限制

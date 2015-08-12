@@ -1,4 +1,4 @@
-package bean;
+package com.scienjus.bean;
 
 import net.minidev.json.JSONObject;
 

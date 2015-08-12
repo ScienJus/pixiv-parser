@@ -1,8 +1,6 @@
-package callback;
+package com.scienjus.callback;
 
-import bean.IllustImage;
-
-import java.awt.*;
+import com.scienjus.bean.IllustImage;
 
 /**
  * Created by xieenlong on 15/8/11.

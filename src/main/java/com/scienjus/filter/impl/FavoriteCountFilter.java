@@ -1,7 +1,7 @@
-package filter.impl;
+package com.scienjus.filter.impl;
 
-import bean.IllustListItem;
-import filter.IllustFilter;
+import com.scienjus.bean.IllustListItem;
+import com.scienjus.filter.IllustFilter;
 
 /**
  * @author XieEnlong
