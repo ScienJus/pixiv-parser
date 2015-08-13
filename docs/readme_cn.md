@@ -114,7 +114,7 @@ List<IllustListItem> items = client.byAuthor("111111",  new IllustFilter() {
 ###获取作品详情
 在筛选出合适的作品后，通过`PixivParserClient`的`getIllust`方法可以通过作品的id获取到作品的详细信息，其中包括作品的标题、作者名称、图片地址等。
 
-示例
+示例：
 ```
 //下载作者id为111111的随机1个r18作品
 List<IllustListItem> items = client.byAuthor("111111",  new IllustFilter() {
@@ -133,7 +133,7 @@ Illust illust = client.getIllust(items.get(0).getId());
 ###下载图片
 默认提供了`IllustImageDownloadTask`用于下载作品的每张图片，同时它在下载完成后会调用传入`DownloadCallback`对象的`onFinished`方法，你可以在这个方法中拿到图片信息和文件对象，然后将它持久化在硬盘中或渲染到页面中或上传到远程服务器，随你喜欢。
 
-示例
+示例：
 ```java
 new Thread(new IllustImageDownloadTask(image, new DownloadCallback() {
     @Override
@@ -145,9 +145,9 @@ new Thread(new IllustImageDownloadTask(image, new DownloadCallback() {
 
 ##帮助
 
-在使用中如果您遇到了问题或是有新的想法，请给我提Issues。或是通过以下方式联系我：
+如果您在使用中遇到了问题或是有新的想法，请给我提Issues。或是通过以下方式联系我：
  - 博客：[我的博客][2]
  - 邮箱：xie_enlong@foxmail.com
 
-[1]:http://www.scienjus.com/pixiv-parser/
+[1]:https://github.com/ScienJus/pixiv-crawler/
 [2]:http://www.scienjus.com
