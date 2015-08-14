@@ -175,6 +175,7 @@ public class PixivParserClient {
      * @return
      */
     private HttpGet defaultHttpGet(String url) {
+        url = url.replace(" ", "%20");
         HttpGet get = new HttpGet(url);
         get.setHeader("Authorization", String.format("Bearer %s", this.accessToken));
         get.setHeader("Referer", "http://spapi.pixiv.net/");
@@ -466,7 +467,11 @@ public class PixivParserClient {
     public static String buildSearchUrl(String keyWord, int page) {
         Map<String, String> params = getCommonParams(page);
         params.put("q", keyWord);
-        params.put("mode", "exact_tag");
+        if (keyWord.split(" ").length == 1) {
+            params.put("mode", "exact_tag");
+        } else {
+            params.put("mode", "text");
+        }
         params.put("per_page", "30");
         return buildGetUrl(PixivParserConfig.SEARCH_URL, params);
     }
