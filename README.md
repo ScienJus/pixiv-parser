@@ -1,11 +1,13 @@
-中文文档：
+###文档（Document）：
 
-[请点击这里][1]
+[简体中文][1]
 
+[English][2]
 
-Document in English:
+###感谢（Thanks）：
 
-[click here][2]
+[pixivpy][3]
 
 [1]:/docs/readme_cn.md
 [2]:/docs/readme_en.md
+[3]:https://github.com/upbit/pixivpy
