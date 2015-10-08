@@ -116,11 +116,11 @@ public class PixivParserClient {
         post.setEntity(buildLoginForm());
         try (CloseableHttpResponse response = client.execute(post)) {
             if (response.getStatusLine().getStatusCode() == 200) {
-                LOGGER.info("登陆成功！");
+                LOGGER.info("登录成功！");
                 this.accessToken = getAccessToken(response);
                 return true;
             } else {
-                LOGGER.error("登陆失败！请检查用户名或密码是否正确");
+                LOGGER.error("登录失败！请检查用户名或密码是否正确");
                 return false;
             }
         } catch (IOException e) {
