@@ -1,9 +1,7 @@
 package com.scienjus.bean;
 
-import net.minidev.json.JSONObject;
 
 import java.sql.Timestamp;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 /**
@@ -22,18 +20,18 @@ public class IllustListItem {
     private int favoriteCount;
     private Timestamp createTime;
 
-    public IllustListItem(JSONObject json) {
-        this.id = json.getAsString("id");
-        this.ageLimit = AgeLimit.customValueOf(json.getAsString("age_limit"));
-        this.manga = Boolean.parseBoolean(json.getAsString("is_manga"));
-        Number count = ((JSONObject)((JSONObject)json.get("stats")).get("favorited_count")).getAsNumber("public");
-        this.favoriteCount = count == null ? 0 : count.intValue();
-        try {
-            this.createTime = new Timestamp(sdf.parse(json.getAsString("created_time")).getTime());
-        } catch (ParseException e) {
-            this.createTime = null;
-        }
-    }
+//    public IllustListItem(JSONObject json) {
+//        this.id = json.getString("id");
+//        this.ageLimit = AgeLimit.customValueOf(json.getAsString("age_limit"));
+//        this.manga = Boolean.parseBoolean(json.getAsString("is_manga"));
+//        Number count = ((JSONObject)((JSONObject)json.get("stats")).get("favorited_count")).getAsNumber("public");
+//        this.favoriteCount = count == null ? 0 : count.intValue();
+//        try {
+//            this.createTime = new Timestamp(sdf.parse(json.getAsString("created_time")).getTime());
+//        } catch (ParseException e) {
+//            this.createTime = null;
+//        }
+//    }
 
     public String getId() {
         return id;

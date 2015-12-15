@@ -1,12 +1,13 @@
 package com.scienjus.client;
 
-import com.scienjus.bean.Illust;
-import com.scienjus.bean.IllustListItem;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.scienjus.config.PixivParserConfig;
 import com.scienjus.filter.IllustFilter;
-import net.minidev.json.JSONArray;
-import net.minidev.json.JSONObject;
-import net.minidev.json.JSONValue;
+import com.scienjus.model.Rank;
+import com.scienjus.model.Work;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -17,6 +18,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
@@ -75,7 +77,7 @@ public class PixivParserClient {
 
     /**
      * 设置密码
-     * set your pixiv id's password
+     * set your pixiv password
      * @param password
      */
     public void setPassword(String password) {
@@ -93,7 +95,7 @@ public class PixivParserClient {
      */
     private UrlEncodedFormEntity buildLoginForm() {
         List<NameValuePair> params = new ArrayList<NameValuePair>();
-        params.add(new BasicNameValuePair("client_id", "bYGKuGVw91e0NMfPGp44euvGt59s"));
+        params.add(new BasicNameValuePair("client_id", "bYGKuGVw91e0NMfPGp44euvGt59s"));    //感谢 pixiv-py 提供
         params.add(new BasicNameValuePair("client_secret", "HP3RmkgAmEGro0gn1x9ioawQE8WMfvLXDz3ZqxpK"));
         params.add(new BasicNameValuePair("username", username));
         params.add(new BasicNameValuePair("password", password));
@@ -135,12 +137,12 @@ public class PixivParserClient {
      * @param illustId
      * @return
      */
-    public Illust getIllust(String illustId) {
+    public Work getIllust(String illustId) {
         String url = buildDetailUrl(illustId);
         HttpGet get = defaultHttpGet(url);
         try (CloseableHttpResponse response = client.execute(get)) {
             JSONObject json = getResponseContent(response);
-            return new Illust(json);
+            return JSON.parseObject(json.getJSONArray("response").getJSONObject(0).toJSONString(), Work.class);
         } catch (IOException e) {
             LOGGER.error(e.getMessage());
         }
@@ -153,9 +155,9 @@ public class PixivParserClient {
      * @param response
      * @return
      */
-    private static final String getAccessToken(CloseableHttpResponse response) throws IOException {
+    private static String getAccessToken(CloseableHttpResponse response) throws IOException {
         JSONObject json = getResponseContent(response);
-        return ((JSONObject)json.get("response")).getAsString("access_token");
+        return json.getJSONObject("response").getString("access_token");
     }
 
     /**
@@ -164,8 +166,14 @@ public class PixivParserClient {
      * @param response
      * @return
      */
-    private static final JSONObject getResponseContent(CloseableHttpResponse response) throws IOException {
-        return (JSONObject) JSONValue.parse(new InputStreamReader(response.getEntity().getContent(), PixivParserConfig.CHARSET));
+    private static JSONObject getResponseContent(CloseableHttpResponse response) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), PixivParserConfig.CHARSET));
+        StringBuilder buffer = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            buffer.append(line);
+        }
+        return JSON.parseObject(buffer.toString());
     }
 
     /**
@@ -188,7 +196,7 @@ public class PixivParserClient {
      * get now ranking
      * @return
      */
-    public List<IllustListItem> ranking() {
+    public List<Rank> ranking() {
         return ranking((Date)null);
     }
 
@@ -197,7 +205,7 @@ public class PixivParserClient {
      * get now ranking with custom filter
      * @return
      */
-    public List<IllustListItem> ranking(IllustFilter filter) {
+    public List<Rank> ranking(IllustFilter filter) {
         return ranking(null, filter);
     }
 
@@ -206,7 +214,7 @@ public class PixivParserClient {
      * get now ranking with limit
      * @return
      */
-    public List<IllustListItem> ranking(int limit) {
+    public List<Rank> ranking(int limit) {
         return ranking((Date)null, limit);
     }
 
@@ -215,7 +223,7 @@ public class PixivParserClient {
      * get now ranking with custom filter and limit
      * @return
      */
-    public List<IllustListItem> ranking(IllustFilter filter, int limit) {
+    public List<Rank> ranking(IllustFilter filter, int limit) {
         return ranking(null, filter, limit);
     }
 
@@ -225,7 +233,7 @@ public class PixivParserClient {
      * @param date
      * @return
      */
-    public List<IllustListItem> ranking(Date date) {
+    public List<Rank> ranking(Date date) {
         return ranking(date, null, PixivParserConfig.NO_LIMIT);
     }
 
@@ -235,7 +243,7 @@ public class PixivParserClient {
      * @param date
      * @return
      */
-    public List<IllustListItem> ranking(Date date, IllustFilter filter) {
+    public List<Rank> ranking(Date date, IllustFilter filter) {
         return ranking(date, filter, PixivParserConfig.NO_LIMIT);
     }
 
@@ -245,7 +253,7 @@ public class PixivParserClient {
      * @param date
      * @return
      */
-    public List<IllustListItem> ranking(Date date, int limit) {
+    public List<Rank> ranking(Date date, int limit) {
         return ranking(date, null, limit);
     }
 
@@ -255,33 +263,25 @@ public class PixivParserClient {
      * @param date
      * @return
      */
-    public List<IllustListItem> ranking(Date date, IllustFilter filter, int limit) {
+    public List<Rank> ranking(Date date, IllustFilter filter, int limit) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
-        List<IllustListItem> items = new ArrayList<>();
+        List<Rank> ranks = new ArrayList<>();
         while (true) {
             String url = buildRankUrl(date, page);
-            LOGGER.error(url);
             get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
                 json = getResponseContent(response);
-                LOGGER.error(json);
-                JSONArray works = (JSONArray) ((JSONObject)((JSONArray) json.get("response")).get(0)).get("works");
-                for (int i = 0; i < works.size(); i++) {
-                    IllustListItem item = new IllustListItem((JSONObject) ((JSONObject) works.get(i)).get("work"));
-                    if (filter == null || filter.doFilter(item)) {
-                        items.add(item);
-                        if (limit != PixivParserConfig.NO_LIMIT && items.size() >= limit) {
-                            return items;
-                        }
-                    }
-                }
+                JSONArray body = JSON.parseObject(json.toJSONString()).getJSONArray("response");
+                Rank rank = JSON.parseObject(body.getJSONObject(0).toJSONString(), Rank.class);
+                ranks.add(rank);
+                LOGGER.error(rank);
                 int nextPage = getNextPage(json);
                 if (nextPage != PixivParserConfig.NO_NEXT_PAGE) {
                     page = nextPage;
                 } else {
-                    return items;
+                    return ranks;
                 }
             } catch (IOException e) {
                 LOGGER.error(e.getMessage());
@@ -295,7 +295,7 @@ public class PixivParserClient {
      * @param keyWord
      * @return
      */
-    public List<IllustListItem> search(String keyWord) {
+    public List<Work> search(String keyWord) {
         return search(keyWord, null, PixivParserConfig.NO_LIMIT);
     }
 
@@ -305,7 +305,7 @@ public class PixivParserClient {
      * @param keyWord
      * @return
      */
-    public List<IllustListItem> search(String keyWord, IllustFilter filter) {
+    public List<Work> search(String keyWord, IllustFilter filter) {
         return search(keyWord, filter, PixivParserConfig.NO_LIMIT);
     }
 
@@ -315,7 +315,7 @@ public class PixivParserClient {
      * @param keyWord
      * @return
      */
-    public List<IllustListItem> search(String keyWord, int limit) {
+    public List<Work> search(String keyWord, int limit) {
         return search(keyWord, null, limit);
     }
 
@@ -325,31 +325,22 @@ public class PixivParserClient {
      * @param keyWord
      * @return
      */
-    public List<IllustListItem> search(String keyWord, IllustFilter filter, int limit) {
+    public List<Work> search(String keyWord, IllustFilter filter, int limit) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
-        List<IllustListItem> items = new ArrayList<>();
+        List<Work> works = new ArrayList<>();
         while (true) {
             String url = buildSearchUrl(keyWord, page);
             get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
                 json = getResponseContent(response);
-                JSONArray works = (JSONArray)json.get("response");
-                for (int i = 0; i < works.size(); i++) {
-                    IllustListItem item = new IllustListItem((JSONObject) works.get(i));
-                    if (filter == null || filter.doFilter(item)) {
-                        items.add(item);
-                        if (limit != PixivParserConfig.NO_LIMIT && items.size() >= limit) {
-                            return items;
-                        }
-                    }
-                }
+                works.addAll(JSON.parseArray(json.getJSONArray("response").toJSONString(), Work.class));
                 int nextPage = getNextPage(json);
                 if (nextPage != PixivParserConfig.NO_NEXT_PAGE) {
                     page = nextPage;
                 } else {
-                    return items;
+                    return works;
                 }
             } catch (IOException e) {
                 LOGGER.error(e.getMessage());
@@ -363,7 +354,7 @@ public class PixivParserClient {
      * @param authorId
      * @return
      */
-    public List<IllustListItem> byAuthor(String authorId) {
+    public List<Work> byAuthor(String authorId) {
         return byAuthor(authorId, null, PixivParserConfig.NO_LIMIT);
     }
 
@@ -373,7 +364,7 @@ public class PixivParserClient {
      * @param authorId
      * @return
      */
-    public List<IllustListItem> byAuthor(String authorId, IllustFilter filter) {
+    public List<Work> byAuthor(String authorId, IllustFilter filter) {
         return byAuthor(authorId, filter, PixivParserConfig.NO_LIMIT);
     }
 
@@ -383,7 +374,7 @@ public class PixivParserClient {
      * @param authorId
      * @return
      */
-    public List<IllustListItem> byAuthor(String authorId, int limit) {
+    public List<Work> byAuthor(String authorId, int limit) {
         return byAuthor(authorId, null, limit);
     }
 
@@ -393,31 +384,22 @@ public class PixivParserClient {
      * @param authorId
      * @return
      */
-    public List<IllustListItem> byAuthor(String authorId, IllustFilter filter, int limit) {
+    public List<Work> byAuthor(String authorId, IllustFilter filter, int limit) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
-        List<IllustListItem> items = new ArrayList<>();
+        List<Work> works = new ArrayList<>();
         while (true) {
             String url = buildByAuthorUrl(authorId, page);
             get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
                 json = getResponseContent(response);
-                JSONArray works = (JSONArray)json.get("response");
-                for (int i = 0; i < works.size(); i++) {
-                    IllustListItem item = new IllustListItem((JSONObject) works.get(i));
-                    if (filter == null || filter.doFilter(item)) {
-                        items.add(item);
-                        if (limit != PixivParserConfig.NO_LIMIT && items.size() >= limit) {
-                            return items;
-                        }
-                    }
-                }
+                works.addAll(JSON.parseArray(json.getJSONArray("response").toJSONString(), Work.class));
                 int nextPage = getNextPage(json);
                 if (nextPage != PixivParserConfig.NO_NEXT_PAGE) {
                     page = nextPage;
                 } else {
-                    return items;
+                    return works;
                 }
             } catch (IOException e) {
                 LOGGER.error(e.getMessage());
@@ -433,7 +415,7 @@ public class PixivParserClient {
      * @param page
      * @return
      */
-    public static final String buildByAuthorUrl(String authorId, int page) {
+    public static String buildByAuthorUrl(String authorId, int page) {
         Map<String, String> params = getCommonParams(page);
         params.put("mode", "exact_tag");
         params.put("per_page", "30");
@@ -482,7 +464,7 @@ public class PixivParserClient {
      * @param page
      * @return
      */
-    private static final Map<String, String> getCommonParams(int page) {
+    private static Map<String, String> getCommonParams(int page) {
         Map<String, String> params = new HashMap<>();
         params.put("image_size", "profile_image_sizes");
         params.put("profile_image_sizes", "px_170x170");
@@ -501,7 +483,7 @@ public class PixivParserClient {
      * @param illustId
      * @return
      */
-    private static final String buildDetailUrl(String illustId) {
+    private static String buildDetailUrl(String illustId) {
         Map<String, String> params = new HashMap<>();
         params.put("image_sizes", "small,medium,large");
         params.put("include_stats", "true");
@@ -515,7 +497,7 @@ public class PixivParserClient {
      * @param params
      * @return
      */
-    private static final String buildGetUrl(String url, Map<String, String> params) {
+    private static String buildGetUrl(String url, Map<String, String> params) {
         if (params.isEmpty()) {
             return url;
         }
@@ -536,7 +518,7 @@ public class PixivParserClient {
      * @param json
      * @return
      */
-    public static final int getNextPage(JSONObject json) {
+    public static int getNextPage(JSONObject json) {
         Object nextPage = ((JSONObject) json.get("pagination")).get("next");
         if (nextPage != null) {
             return Integer.parseInt(nextPage.toString());
