@@ -198,7 +198,7 @@ public class PixivParserClient {
      * get now ranking
      * @return
      */
-    public List<Rank> ranking() {
+    public Rank ranking() {
         return ranking((Date)null);
     }
 
@@ -208,25 +208,27 @@ public class PixivParserClient {
      * @param date
      * @return
      */
-    public List<Rank> ranking(Date date) {
+    public Rank ranking(Date date) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
-        List<Rank> ranks = new ArrayList<>();
+        Rank rank = null;
         while (true) {
             String url = buildRankUrl(date, page);
             get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
                 json = getResponseContent(response);
                 JSONArray body = JSON.parseObject(json.toJSONString()).getJSONArray("response");
-                Rank rank = JSON.parseObject(body.getJSONObject(0).toJSONString(), Rank.class);
-                ranks.add(rank);
-                LOGGER.error(rank);
+                if (rank == null) {
+                    rank = JSON.parseObject(body.getJSONObject(0).toJSONString(), Rank.class);
+                } else {
+                    rank.getWorks().addAll(JSON.parseObject(body.getJSONObject(0).toJSONString(), Rank.class).getWorks());
+                }
                 int nextPage = getNextPage(json);
                 if (nextPage != PixivParserConfig.NO_NEXT_PAGE) {
                     page = nextPage;
                 } else {
-                    return ranks;
+                    return rank;
                 }
             } catch (IOException e) {
                 LOGGER.error(e.getMessage());
