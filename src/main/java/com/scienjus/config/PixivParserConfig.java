@@ -61,4 +61,5 @@ public class PixivParserConfig {
      * the page number when do not have next page
      */
     public static final int NO_NEXT_PAGE = -1;
+
 }

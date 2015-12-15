@@ -1,7 +1,6 @@
 package com.scienjus.model;
 
 import com.alibaba.fastjson.annotation.JSONField;
-import com.sun.org.glassfish.external.statistics.Stats;
 
 import java.util.List;
 

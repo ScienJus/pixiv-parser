@@ -4,10 +4,12 @@ package com.scienjus.client;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.scienjus.callback.WorkCallback;
 import com.scienjus.config.PixivParserConfig;
-import com.scienjus.filter.IllustFilter;
+import com.scienjus.filter.WorkFilter;
 import com.scienjus.model.Rank;
 import com.scienjus.model.Work;
+import com.scienjus.param.ParserParam;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -201,69 +203,12 @@ public class PixivParserClient {
     }
 
     /**
-     * 获得当天的排行榜（使用自定义过滤器筛选）
-     * get now ranking with custom filter
-     * @return
-     */
-    public List<Rank> ranking(IllustFilter filter) {
-        return ranking(null, filter);
-    }
-
-    /**
-     * 获得当天的排行榜（指定作品数）
-     * get now ranking with limit
-     * @return
-     */
-    public List<Rank> ranking(int limit) {
-        return ranking((Date)null, limit);
-    }
-
-    /**
-     * 获得当天的排行榜（使用自定义过滤器筛选并指定作品数）
-     * get now ranking with custom filter and limit
-     * @return
-     */
-    public List<Rank> ranking(IllustFilter filter, int limit) {
-        return ranking(null, filter, limit);
-    }
-
-    /**
-     * 获得某天的排行榜
-     * get ranking on one day
-     * @param date
-     * @return
-     */
-    public List<Rank> ranking(Date date) {
-        return ranking(date, null, PixivParserConfig.NO_LIMIT);
-    }
-
-    /**
-     * 获得某天的排行榜（使用自定义过滤器筛选）
-     * get ranking on one day with custom filter
-     * @param date
-     * @return
-     */
-    public List<Rank> ranking(Date date, IllustFilter filter) {
-        return ranking(date, filter, PixivParserConfig.NO_LIMIT);
-    }
-
-    /**
-     * 获得某天的排行榜（指定作品数）
-     * get ranking on one day with limit
-     * @param date
-     * @return
-     */
-    public List<Rank> ranking(Date date, int limit) {
-        return ranking(date, null, limit);
-    }
-
-    /**
      * 获得某天的排行榜（使用自定义过滤器筛选并指定作品数）
      * get ranking on one day with custom filter and limit
      * @param date
      * @return
      */
-    public List<Rank> ranking(Date date, IllustFilter filter, int limit) {
+    public List<Rank> ranking(Date date) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
@@ -296,27 +241,7 @@ public class PixivParserClient {
      * @return
      */
     public List<Work> search(String keyWord) {
-        return search(keyWord, null, PixivParserConfig.NO_LIMIT);
-    }
-
-    /**
-     * 查询作品（使用自定义过滤器筛选）
-     * search illusts by key word with custom filter
-     * @param keyWord
-     * @return
-     */
-    public List<Work> search(String keyWord, IllustFilter filter) {
-        return search(keyWord, filter, PixivParserConfig.NO_LIMIT);
-    }
-
-    /**
-     * 查询作品（指定作品数）
-     * search illusts by key word with limit
-     * @param keyWord
-     * @return
-     */
-    public List<Work> search(String keyWord, int limit) {
-        return search(keyWord, null, limit);
+        return search(keyWord, new ParserParam());
     }
 
     /**
@@ -325,7 +250,7 @@ public class PixivParserClient {
      * @param keyWord
      * @return
      */
-    public List<Work> search(String keyWord, IllustFilter filter, int limit) {
+    public List<Work> search(String keyWord, ParserParam param) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
@@ -335,7 +260,22 @@ public class PixivParserClient {
             get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
                 json = getResponseContent(response);
-                works.addAll(JSON.parseArray(json.getJSONArray("response").toJSONString(), Work.class));
+                JSONArray body = json.getJSONArray("response");
+                for (int i = 0; i < body.size(); i++) {
+                    Work work = JSON.parseObject(body.getJSONObject(i).toJSONString(), Work.class);
+                    WorkFilter filter = param.getFilter();
+                    if (filter == null || filter.doFilter(work)) {
+                        WorkCallback callback = param.getCallback();
+                        if (callback != null) {
+                            callback.onFind(work);
+                        }
+                        works.add(work);
+                        int limit = param.getLimit();
+                        if (limit != PixivParserConfig.NO_LIMIT && works.size() >= limit) {
+                            return works;
+                        }
+                    }
+                }
                 int nextPage = getNextPage(json);
                 if (nextPage != PixivParserConfig.NO_NEXT_PAGE) {
                     page = nextPage;
@@ -355,27 +295,7 @@ public class PixivParserClient {
      * @return
      */
     public List<Work> byAuthor(String authorId) {
-        return byAuthor(authorId, null, PixivParserConfig.NO_LIMIT);
-    }
-
-    /**
-     * 获得指定作者的作品（使用自定义过滤器筛选）
-     * get illusts by author with custom filter
-     * @param authorId
-     * @return
-     */
-    public List<Work> byAuthor(String authorId, IllustFilter filter) {
-        return byAuthor(authorId, filter, PixivParserConfig.NO_LIMIT);
-    }
-
-    /**
-     * 获得指定作者的作品（指定作品数）
-     * get illusts by author with limit
-     * @param authorId
-     * @return
-     */
-    public List<Work> byAuthor(String authorId, int limit) {
-        return byAuthor(authorId, null, limit);
+        return byAuthor(authorId, new ParserParam());
     }
 
     /**
@@ -384,7 +304,7 @@ public class PixivParserClient {
      * @param authorId
      * @return
      */
-    public List<Work> byAuthor(String authorId, IllustFilter filter, int limit) {
+    public List<Work> byAuthor(String authorId, ParserParam param) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
@@ -394,7 +314,22 @@ public class PixivParserClient {
             get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
                 json = getResponseContent(response);
-                works.addAll(JSON.parseArray(json.getJSONArray("response").toJSONString(), Work.class));
+                JSONArray body = json.getJSONArray("response");
+                for (int i = 0; i < body.size(); i++) {
+                    Work work = JSON.parseObject(body.getJSONObject(i).toJSONString(), Work.class);
+                    WorkFilter filter = param.getFilter();
+                    if (filter == null || filter.doFilter(work)) {
+                        WorkCallback callback = param.getCallback();
+                        if (callback != null) {
+                            callback.onFind(work);
+                        }
+                        works.add(work);
+                        int limit = param.getLimit();
+                        if (limit != PixivParserConfig.NO_LIMIT && works.size() >= limit) {
+                            return works;
+                        }
+                    }
+                }
                 int nextPage = getNextPage(json);
                 if (nextPage != PixivParserConfig.NO_NEXT_PAGE) {
                     page = nextPage;
