@@ -5,7 +5,7 @@ import com.alibaba.fastjson.annotation.JSONField;
 import java.util.List;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/12/15.
  */
 public class Work {

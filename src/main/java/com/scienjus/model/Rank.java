@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/12/15.
  */
 public class Rank {

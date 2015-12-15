@@ -3,7 +3,7 @@ package com.scienjus.callback;
 import com.scienjus.model.Work;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/12/15.
  */
 public interface WorkCallback {

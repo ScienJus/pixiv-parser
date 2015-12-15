@@ -3,7 +3,7 @@ package com.scienjus.model;
 import java.util.List;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/12/15.
  */
 public class Metadata {

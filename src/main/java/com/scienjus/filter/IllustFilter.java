@@ -3,7 +3,7 @@ package com.scienjus.filter;
 import com.scienjus.bean.IllustListItem;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/8/11.
  */
 public interface IllustFilter {

@@ -3,7 +3,7 @@ package com.scienjus.bean;
 import java.util.List;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/8/10.
  */
 public class Illust {

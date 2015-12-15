@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
 import java.io.*;
 
 /**
- * Created by xieenlong on 15/8/11.
+ * Created by Scienjus on 15/8/11.
  */
 public class IllustImageDownloadTask implements Runnable {
 

@@ -4,7 +4,7 @@ import com.scienjus.bean.IllustListItem;
 import com.scienjus.filter.IllustFilter;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/8/11.
  */
 public class FavoriteCountFilter implements IllustFilter {

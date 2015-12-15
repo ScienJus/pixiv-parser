@@ -3,7 +3,7 @@ package com.scienjus.config;
 import java.nio.charset.Charset;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/8/11.
  */
 public class PixivParserConfig {

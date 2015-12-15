@@ -3,7 +3,7 @@ package com.scienjus.model;
 import com.alibaba.fastjson.annotation.JSONField;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/12/15.
  */
 public class ImageUrls {

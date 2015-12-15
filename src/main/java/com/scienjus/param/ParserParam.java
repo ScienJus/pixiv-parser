@@ -5,7 +5,7 @@ import com.scienjus.config.PixivParserConfig;
 import com.scienjus.filter.WorkFilter;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/12/15.
  */
 public class ParserParam {

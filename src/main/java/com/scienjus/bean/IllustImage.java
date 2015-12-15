@@ -1,7 +1,7 @@
 package com.scienjus.bean;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/8/10.
  */
 public class IllustImage {

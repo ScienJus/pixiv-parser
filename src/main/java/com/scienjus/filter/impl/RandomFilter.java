@@ -6,7 +6,7 @@ import com.scienjus.filter.IllustFilter;
 import java.util.Random;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/8/11.
  */
 public class RandomFilter implements IllustFilter {
