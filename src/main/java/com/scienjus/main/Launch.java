@@ -21,7 +21,7 @@ public class Launch {
         client.setPassword("a123456");
         if (client.login()) {
             ParserParam param = new ParserParam()
-                    .withLimit(5)
+                    .withLimit(1)
                     .withFilter(new WorkFilter() {
                         @Override
                         public boolean doFilter(Work work) {
@@ -34,7 +34,11 @@ public class Launch {
                             System.out.println(work.getTitle());
                         }
                     });
-            client.search("咲-Saki-", param);
+            Work work = client.search("咲-Saki-", param).get(0);
+            System.out.println(work.getMetadata());
+
+            work = client.getWork(work.getId());
+            System.out.println(work.getMetadata());
         }
         //关闭资源
         client.close();

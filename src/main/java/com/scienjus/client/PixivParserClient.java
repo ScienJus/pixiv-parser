@@ -136,11 +136,11 @@ public class PixivParserClient {
     /**
      * 通过id获取作品
      * get illust by id
-     * @param illustId
+     * @param workId
      * @return
      */
-    public Work getIllust(String illustId) {
-        String url = buildDetailUrl(illustId);
+    public Work getWork(int workId) {
+        String url = buildDetailUrl(workId);
         HttpGet get = defaultHttpGet(url);
         try (CloseableHttpResponse response = client.execute(get)) {
             JSONObject json = getResponseContent(response);
@@ -294,7 +294,7 @@ public class PixivParserClient {
      * @param authorId
      * @return
      */
-    public List<Work> byAuthor(String authorId) {
+    public List<Work> byAuthor(int authorId) {
         return byAuthor(authorId, new ParserParam());
     }
 
@@ -304,7 +304,7 @@ public class PixivParserClient {
      * @param authorId
      * @return
      */
-    public List<Work> byAuthor(String authorId, ParserParam param) {
+    public List<Work> byAuthor(int authorId, ParserParam param) {
         HttpGet get;
         JSONObject json;
         int page = PixivParserConfig.START_PAGE;
@@ -350,11 +350,11 @@ public class PixivParserClient {
      * @param page
      * @return
      */
-    public static String buildByAuthorUrl(String authorId, int page) {
+    public static String buildByAuthorUrl(int authorId, int page) {
         Map<String, String> params = getCommonParams(page);
         params.put("mode", "exact_tag");
         params.put("per_page", "30");
-        return buildGetUrl(PixivParserConfig.AUTHOR_DETAIL_URL.replace("{authorId}", authorId), params);
+        return buildGetUrl(PixivParserConfig.AUTHOR_DETAIL_URL.replace("{authorId}", String.valueOf(authorId)), params);
     }
 
     /**
@@ -415,14 +415,14 @@ public class PixivParserClient {
     /**
      * 作品详情url
      * thr url in getIllust api
-     * @param illustId
+     * @param workId
      * @return
      */
-    private static String buildDetailUrl(String illustId) {
+    private static String buildDetailUrl(int workId) {
         Map<String, String> params = new HashMap<>();
         params.put("image_sizes", "small,medium,large");
         params.put("include_stats", "true");
-        return buildGetUrl(PixivParserConfig.ILLUST_DETAIL_URL.replace("{illustId}", illustId), params);
+        return buildGetUrl(PixivParserConfig.ILLUST_DETAIL_URL.replace("{illustId}", String.valueOf(workId)), params);
     }
 
     /**
