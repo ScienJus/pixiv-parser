@@ -1,3 +1,4 @@
 *.class
 target
 *.iml
+src/main/java/com/scienjus/main/Launch.java
