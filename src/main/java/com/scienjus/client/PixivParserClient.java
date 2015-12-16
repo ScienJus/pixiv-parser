@@ -199,7 +199,7 @@ public class PixivParserClient {
      * @return
      */
     public Rank ranking() {
-        return ranking((Date)null);
+        return ranking(null);
     }
 
     /**
@@ -253,15 +253,13 @@ public class PixivParserClient {
      * @return
      */
     public List<Work> search(String keyWord, ParserParam param) {
-        HttpGet get;
-        JSONObject json;
         int page = PixivParserConfig.START_PAGE;
         List<Work> works = new ArrayList<>();
         while (true) {
             String url = buildSearchUrl(keyWord, page);
-            get = defaultHttpGet(url);
+            HttpGet get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
-                json = getResponseContent(response);
+                JSONObject json = getResponseContent(response);
                 JSONArray body = json.getJSONArray("response");
                 for (int i = 0; i < body.size(); i++) {
                     Work work = JSON.parseObject(body.getJSONObject(i).toJSONString(), Work.class);
@@ -307,15 +305,13 @@ public class PixivParserClient {
      * @return
      */
     public List<Work> byAuthor(int authorId, ParserParam param) {
-        HttpGet get;
-        JSONObject json;
         int page = PixivParserConfig.START_PAGE;
         List<Work> works = new ArrayList<>();
         while (true) {
             String url = buildByAuthorUrl(authorId, page);
-            get = defaultHttpGet(url);
+            HttpGet get = defaultHttpGet(url);
             try (CloseableHttpResponse response = client.execute(get)) {
-                json = getResponseContent(response);
+                JSONObject json = getResponseContent(response);
                 JSONArray body = json.getJSONArray("response");
                 for (int i = 0; i < body.size(); i++) {
                     Work work = JSON.parseObject(body.getJSONObject(i).toJSONString(), Work.class);
