@@ -4,9 +4,11 @@ package com.scienjus.client;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.scienjus.callback.DownloadCallback;
 import com.scienjus.callback.WorkCallback;
 import com.scienjus.config.PixivParserConfig;
 import com.scienjus.filter.WorkFilter;
+import com.scienjus.model.Page;
 import com.scienjus.model.Rank;
 import com.scienjus.model.Work;
 import com.scienjus.param.ParserParam;
@@ -20,9 +22,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -267,7 +267,7 @@ public class PixivParserClient {
                     if (filter == null || filter.doFilter(work)) {
                         WorkCallback callback = param.getCallback();
                         if (callback != null) {
-                            callback.onFind(work);
+                            callback.onFound(work);
                         }
                         works.add(work);
                         int limit = param.getLimit();
@@ -319,7 +319,7 @@ public class PixivParserClient {
                     if (filter == null || filter.doFilter(work)) {
                         WorkCallback callback = param.getCallback();
                         if (callback != null) {
-                            callback.onFind(work);
+                            callback.onFound(work);
                         }
                         works.add(work);
                         int limit = param.getLimit();
@@ -468,6 +468,60 @@ public class PixivParserClient {
             client.close();
         } catch (IOException e) {
             LOGGER.error("关闭客户端失败：" + e.getMessage());
+        }
+    }
+
+    public static void download(Work work, DownloadCallback callback) {
+        DownloadTask task = new DownloadTask(work, callback);
+        new Thread(task).start();
+    }
+
+    private static class DownloadTask implements Runnable {
+
+        private Work work;
+
+        private DownloadCallback callback;
+
+        public DownloadTask(Work work, DownloadCallback callback) {
+            this.work = work;
+            this.callback = callback;
+        }
+
+        @Override
+        public void run() {
+            if (work.isManga()) {
+                List<byte[]> files = new ArrayList<>();
+                for (Page page : work.getMetadata().getPages()) {
+                    files.add(downloadImage(page.getImageUrls().getLarge()));
+                }
+                if (callback != null) {
+                    callback.onMangaFinished(work, files);
+                }
+            } else {
+                byte[] file = downloadImage(work.getImageUrls().getLarge());
+                if (callback != null) {
+                    callback.onIllustFinished(work, file);
+                }
+            }
+        }
+
+        private byte[] downloadImage(String url) {
+            HttpGet get = new HttpGet(url);
+            get.setHeader("Referer", "http://www.pixiv.net");
+            try (CloseableHttpClient client = HttpClients.createDefault();
+                 CloseableHttpResponse response = client.execute(get);
+                 InputStream in = response.getEntity().getContent();
+                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[1024];
+                int len;
+                while ((len = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, len);
+                }
+                return out.toByteArray();
+            } catch (IOException e) {
+                LOGGER.error(e.getMessage());
+            }
+            return null;
         }
     }
 

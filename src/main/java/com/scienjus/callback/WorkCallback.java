@@ -8,5 +8,5 @@ import com.scienjus.model.Work;
  */
 public interface WorkCallback {
 
-    void onFind(Work work);
+    void onFound(Work work);
 }

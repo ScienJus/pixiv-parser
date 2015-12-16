@@ -105,7 +105,7 @@ ParserParam param = new ParserParam()
         })
         .withCallback(new WorkCallback() {
             @Override
-            public void onFind(Work work) {
+            public void onFound(Work work) {
                 System.out.println(work.getTitle());
             }
         });
@@ -122,6 +122,18 @@ client.search("咲-Saki-", param);
 //获得作品id为111111的作品
 Work work = client.getIllust(111111);
 ```
+
+###下载图片
+
+使用`PixivParserClient`的`download`方法可以下载某个作品，它的参数有：
+
+- `Work work`：需要下载的作品（必须是调用`getWork`方法获取的对象，否则无法获得图片信息）
+- `DownloadCallback callback`：下载后的回调对象
+
+该方法会启动一个新线程去下载图片，所以推荐在`search`或`byAuthor`时使用`ParserParam`的`callback`进行下载，可以节约大量时间。
+
+`DownloadCallback`有两个方法：`onIllustFinished`和`onMangaFinished`，如果下载的作品是插画（单张图片）会调用前者，如果是漫画（多张图片）会调用后者。
+
 
 ##帮助
 
