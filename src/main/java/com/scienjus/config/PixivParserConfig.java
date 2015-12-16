@@ -3,7 +3,7 @@ package com.scienjus.config;
 import java.nio.charset.Charset;
 
 /**
- * @author XieEnlong
+ * @author Scienjus
  * @date 2015/8/11.
  */
 public class PixivParserConfig {
@@ -61,4 +61,5 @@ public class PixivParserConfig {
      * the page number when do not have next page
      */
     public static final int NO_NEXT_PAGE = -1;
+
 }
