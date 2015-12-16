@@ -97,7 +97,7 @@ public class PixivParserClient {
      */
     private UrlEncodedFormEntity buildLoginForm() {
         List<NameValuePair> params = new ArrayList<NameValuePair>();
-        params.add(new BasicNameValuePair("client_id", "bYGKuGVw91e0NMfPGp44euvGt59s"));    //感谢 pixiv-py 提供
+        params.add(new BasicNameValuePair("client_id", "bYGKuGVw91e0NMfPGp44euvGt59s"));    //感谢 pixivpy 提供
         params.add(new BasicNameValuePair("client_secret", "HP3RmkgAmEGro0gn1x9ioawQE8WMfvLXDz3ZqxpK"));
         params.add(new BasicNameValuePair("username", username));
         params.add(new BasicNameValuePair("password", password));
@@ -195,7 +195,7 @@ public class PixivParserClient {
 
     /**
      * 获得当天的排行榜
-     * get now ranking
+     * get today ranking
      * @return
      */
     public Rank ranking() {
@@ -203,8 +203,8 @@ public class PixivParserClient {
     }
 
     /**
-     * 获得某天的排行榜（使用自定义过滤器筛选并指定作品数）
-     * get ranking on one day with custom filter and limit
+     * 获得某天的排行榜
+     * get ranking on one day
      * @param date
      * @return
      */
@@ -247,8 +247,8 @@ public class PixivParserClient {
     }
 
     /**
-     * 查询作品（使用自定义过滤器筛选并指定作品数）
-     * search illusts by key word with custom filter and limit
+     * 查询作品
+     * search illusts by key word with custom param
      * @param keyWord
      * @return
      */
@@ -299,8 +299,8 @@ public class PixivParserClient {
     }
 
     /**
-     * 获得指定作者的作品（使用自定义过滤器筛选并指定作品数）
-     * get illusts by author with custom filter and limit
+     * 获得指定作者的作品
+     * get illusts by author with custom param
      * @param authorId
      * @return
      */
@@ -343,7 +343,7 @@ public class PixivParserClient {
 
     /**
      * byAuthor请求的url
-     * the url in byAuthor api
+     * build byAuthor api url
      * @param authorId
      * @param page
      * @return
@@ -357,7 +357,7 @@ public class PixivParserClient {
 
     /**
      * 请求排行榜的url
-     * the url in ranking api
+     * build ranking api url
      * @param date
      * @param page
      * @return
@@ -374,7 +374,7 @@ public class PixivParserClient {
 
     /**
      * 请求搜索的url
-     * the url in search api
+     * the search api url
      * @param keyWord
      * @param page
      * @return
@@ -412,7 +412,7 @@ public class PixivParserClient {
 
     /**
      * 作品详情url
-     * thr url in getIllust api
+     * the getWork api url
      * @param workId
      * @return
      */
