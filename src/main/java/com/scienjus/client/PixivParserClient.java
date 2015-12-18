@@ -96,7 +96,7 @@ public class PixivParserClient {
      * @return
      */
     private UrlEncodedFormEntity buildLoginForm() {
-        List<NameValuePair> params = new ArrayList<NameValuePair>();
+        List<NameValuePair> params = new ArrayList<>();
         params.add(new BasicNameValuePair("client_id", "bYGKuGVw91e0NMfPGp44euvGt59s"));    //感谢 pixivpy 提供
         params.add(new BasicNameValuePair("client_secret", "HP3RmkgAmEGro0gn1x9ioawQE8WMfvLXDz3ZqxpK"));
         params.add(new BasicNameValuePair("username", username));
