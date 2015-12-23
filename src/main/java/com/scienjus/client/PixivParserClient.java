@@ -106,7 +106,7 @@ public class PixivParserClient {
     }
 
     /**
-     * 登陆
+     * 登录
      * login and get access_token
      * @return access_token
      */
@@ -158,8 +158,7 @@ public class PixivParserClient {
      * @return
      */
     private static String getAccessToken(CloseableHttpResponse response) throws IOException {
-        JSONObject json = getResponseContent(response);
-        return json.getJSONObject("response").getString("access_token");
+        return getResponseContent(response).getJSONObject("response").getString("access_token");
     }
 
     /**
@@ -452,15 +451,15 @@ public class PixivParserClient {
      * @return
      */
     public static int getNextPage(JSONObject json) {
-        Object nextPage = ((JSONObject) json.get("pagination")).get("next");
+        Integer nextPage = ((JSONObject) json.get("pagination")).getInteger("next");
         if (nextPage != null) {
-            return Integer.parseInt(nextPage.toString());
+            return nextPage;
         }
         return PixivParserConfig.NO_NEXT_PAGE;
     }
 
     /**
-     * 关闭PixivClient端
+     * 关闭client
      * close the client
      */
     public void close() {
@@ -510,11 +509,10 @@ public class PixivParserClient {
             get.setHeader("Referer", "http://www.pixiv.net");
             try (CloseableHttpClient client = HttpClients.createDefault();
                  CloseableHttpResponse response = client.execute(get);
-                 InputStream in = response.getEntity().getContent();
                  ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 byte[] buffer = new byte[1024];
                 int len;
-                while ((len = in.read(buffer)) != -1) {
+                while ((len = response.getEntity().getContent().read(buffer)) != -1) {
                     out.write(buffer, 0, len);
                 }
                 return out.toByteArray();

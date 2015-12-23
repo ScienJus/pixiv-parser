@@ -5,6 +5,7 @@ import com.scienjus.model.Work;
 import java.util.List;
 
 /**
+ * 下载图片的回调
  * @author XieEnlong
  * @date 2015/12/16.
  */
