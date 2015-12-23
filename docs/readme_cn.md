@@ -139,7 +139,7 @@ Work work = client.getIllust(111111);
 
 如果您在使用中遇到了问题或是有新的想法，请给我提Issues。或是通过以下方式联系我：
  - 博客：[我的博客][2]
- - 邮箱：xie_enlong@foxmail.com
+ - 邮箱：`i@scienjus.com`
 
 [1]:https://github.com/ScienJus/pixiv-crawler/
 [2]:http://www.scienjus.com
