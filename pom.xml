@@ -14,6 +14,7 @@
       <artifactId>httpclient</artifactId>
       <version>4.5</version>
     </dependency>
+
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
@@ -25,7 +26,6 @@
       <artifactId>fastjson</artifactId>
       <version>1.2.7</version>
     </dependency>
-
   </dependencies>
 
   <build>
@@ -41,5 +41,4 @@
       </plugin>
     </plugins>
   </build>
-
 </project>

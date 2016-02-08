@@ -10,11 +10,36 @@
 
 所以如果你只需要简单的将图片下载到本地磁盘，而不需要拓展自定义功能，可以使用[Pixiv Crawler][1]。
 
-##操作说明
+##快速开始
 
 ###如何运行
 
-在`com/scienjus/main/Launch.java`中编写你的任务。
+下载项目，在`com/scienjus/main/Launch.java`中编写你的任务。
+
+或是添加Maven依赖：
+
+仓库：
+
+```
+<repository>
+    <id>scienjus-mvn-repo</id>
+    <url>https://raw.github.com/ScienJus/maven/mvn-repo/</url>
+    <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+    </snapshots>
+</repository>
+```
+
+依赖：
+
+```
+<dependency>
+    <groupId>com.scienjus</groupId>
+    <artifactId>pixiv-parser</artifactId>
+    <version>1.0-SNAPSHOT</version>
+</dependency>
+```
 
 ###创建和关闭
 
@@ -114,7 +139,7 @@ client.search("咲-Saki-", param);
 
 ###获取作品详情
 
-在查找出合适的作品后，通过`PixivParserClient`的`getWork`方法可以通过作品的id获取到作品的详细信息，主要是为了获取作品的大图。
+在查找出合适的作品后，通过`PixivParserClient`的`getWork`方法可以通过作品的id获取到作品的详细信息，主要是为了获取作品的大图地址。
 
 示例：
 
