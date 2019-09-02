@@ -1,6 +1,7 @@
 package com.scienjus.config;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Scienjus
@@ -18,7 +19,7 @@ public class PixivParserConfig {
      * 字符编码
      * charset
      */
-    public static final Charset CHARSET = Charset.forName("UTF-8");
+    public static final Charset CHARSET = StandardCharsets.UTF_8;
 
     /**
      * 登陆地址
@@ -62,4 +63,26 @@ public class PixivParserConfig {
      */
     public static final int NO_NEXT_PAGE = -1;
 
+    // 感谢 pixivpy 提供
+    /**
+     * client_id header value
+     */
+    public static final String CLIENT_ID = "MOBrBDS8blbauoSck0ZfDbtuzpyT";
+
+    /**
+     * client_secret header value
+     */
+    public static final String CLIENT_SECRET = "lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj";
+
+    /**
+     * hash value used internally within the Pixiv app
+     */
+    public static final String HASH_SECRET = "28c1fdd170a5204386cb1313c7077b34f83e4aaf4aa829ce78c231e05b0bae2c";
+
+    /**
+     * user agent header value
+     */
+    public static final String USER_AGENT = "PixivAndroidApp/5.0.64 (Android 6.0)";
+
 }
+

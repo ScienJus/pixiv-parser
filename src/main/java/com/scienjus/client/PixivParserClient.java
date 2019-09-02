@@ -22,6 +22,14 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 
+import javax.xml.bind.DatatypeConverter;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -97,11 +105,12 @@ public class PixivParserClient {
      */
     private UrlEncodedFormEntity buildLoginForm() {
         List<NameValuePair> params = new ArrayList<>();
-        params.add(new BasicNameValuePair("client_id", "bYGKuGVw91e0NMfPGp44euvGt59s"));    //感谢 pixivpy 提供
-        params.add(new BasicNameValuePair("client_secret", "HP3RmkgAmEGro0gn1x9ioawQE8WMfvLXDz3ZqxpK"));
+        params.add(new BasicNameValuePair("client_id", PixivParserConfig.CLIENT_ID));
+        params.add(new BasicNameValuePair("client_secret", PixivParserConfig.CLIENT_SECRET));
+        params.add(new BasicNameValuePair("grant_type", "password"));
         params.add(new BasicNameValuePair("username", username));
         params.add(new BasicNameValuePair("password", password));
-        params.add(new BasicNameValuePair("grant_type", "password"));
+        params.add(new BasicNameValuePair("get_secure_url", "true"));
         return new UrlEncodedFormEntity(params, PixivParserConfig.CHARSET);
     }
 
@@ -112,19 +121,43 @@ public class PixivParserClient {
      */
     public boolean login() {
         if (username == null || password == null) {
-            LOGGER.error("用户名或密码为空！");
+            LOGGER.error("username or password is empty！");
             return false;
         }
-        LOGGER.info("当前登录的用户为：" + username);
+        LOGGER.info("The currently logged in user is：" + username);
         HttpPost post = new HttpPost(PixivParserConfig.LOGIN_URL);
         post.setEntity(buildLoginForm());
+
+        // get current time in ISO format
+        OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+        String localTime = (formatter.format(now)); // e.g. 2019-09-02T22:10:52+01:00
+
+        // generate X-Client-Hash = md5(localTime + HASH_SECRET)
+        String clientHash = "";
+        try {
+            MessageDigest messageDigest;
+
+            messageDigest = MessageDigest.getInstance("MD5");
+            messageDigest.update((localTime + PixivParserConfig.HASH_SECRET).getBytes(PixivParserConfig.CHARSET));
+            byte[] digiest = messageDigest.digest();
+            clientHash = DatatypeConverter.printHexBinary(digiest).toLowerCase();
+        } catch (NoSuchAlgorithmException e) {
+            LOGGER.error(e.getMessage());
+        }
+
+        // set headers
+        post.setHeader("User-Agent", PixivParserConfig.USER_AGENT);
+        post.setHeader("X-Client-Time", localTime);
+        post.setHeader("X-Client-Hash", clientHash);
+
         try (CloseableHttpResponse response = client.execute(post)) {
             if (response.getStatusLine().getStatusCode() == 200) {
-                LOGGER.info("登录成功！");
+                LOGGER.info("login successful！");
                 this.accessToken = getAccessToken(response);
                 return true;
             } else {
-                LOGGER.error("登录失败！请检查用户名或密码是否正确");
+                LOGGER.error("Login failed！Please check if the username or password is correct");
                 return false;
             }
         } catch (IOException e) {
@@ -188,7 +221,7 @@ public class PixivParserClient {
         HttpGet get = new HttpGet(url);
         get.setHeader("Authorization", String.format("Bearer %s", this.accessToken));
         get.setHeader("Referer", "http://spapi.pixiv.net/");
-        get.setHeader("User-Agent", "PixivIOSApp/5.6.0");
+        get.setHeader("User-Agent", PixivParserConfig.USER_AGENT);
         return get;
     }
 
